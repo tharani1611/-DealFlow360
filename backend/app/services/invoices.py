@@ -37,9 +37,23 @@ async def calculate_invoice_totals(invoice: Invoice, items: Optional[List[Invoic
 
 
 async def generate_invoice_number(session: AsyncSession, organization_id: uuid.UUID) -> str:
-    stmt = select(func.count(Invoice.id)).where(Invoice.organization_id == organization_id)
-    count = int((await session.execute(stmt)).scalar() or 0) + 1
-    return f"INV-{count:06d}"
+    stmt = (
+        select(Invoice.invoice_number)
+        .where(Invoice.organization_id == organization_id)
+        .order_by(Invoice.created_at.desc(), Invoice.invoice_number.desc())
+        .limit(20)
+    )
+    references = (await session.execute(stmt)).scalars().all()
+    max_num = 0
+    for ref in references:
+        if ref and ref.startswith("INV-"):
+            try:
+                num = int(ref.replace("INV-", "").strip())
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                continue
+    return f"INV-{max_num + 1:06d}"
 
 
 async def create_invoice(

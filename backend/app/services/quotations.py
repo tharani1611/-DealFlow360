@@ -186,10 +186,17 @@ async def calculate_line_items_and_totals(
         unit_cost = round_decimal(item_input.unit_cost) if item_input.unit_cost is not None else round_decimal(getattr(product, "unit_cost", Decimal("0.00")) or Decimal("0.00"))
 
         quantity = round_decimal(item_input.quantity)
-        disc_amt = round_decimal(item_input.discount_amount)
-        tax_amt = round_decimal(item_input.tax_amount)
-
         base_line_total = round_decimal(quantity * unit_price)
+
+        disc_amt = round_decimal(item_input.discount_amount)
+        if disc_amt == Decimal("0.00") and item_input.discount_percent > Decimal("0.00"):
+            disc_amt = round_decimal(base_line_total * (round_decimal(item_input.discount_percent) / Decimal("100.00")))
+
+        tax_amt = round_decimal(item_input.tax_amount)
+        if tax_amt == Decimal("0.00") and item_input.tax_rate > Decimal("0.00"):
+            taxable_basis = max(Decimal("0.00"), base_line_total - disc_amt)
+            tax_amt = round_decimal(taxable_basis * (round_decimal(item_input.tax_rate) / Decimal("100.00")))
+
         line_total = round_decimal(base_line_total - disc_amt + tax_amt)
 
         q_item = QuotationItem(

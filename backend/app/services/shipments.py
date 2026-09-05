@@ -120,10 +120,15 @@ async def update_shipment_status(
     if not shipment:
         raise NotFoundException(f"Shipment {shipment_id} not found")
 
-    shipment.status = new_status.upper()
-    if new_status.upper() == "SHIPPED" and not shipment.shipped_at:
+    valid_statuses = ["DRAFT", "READY", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CANCELLED"]
+    target_status = new_status.strip().upper()
+    if target_status not in valid_statuses:
+        raise BusinessRuleViolationException(f"Invalid shipment status '{new_status}'. Allowed statuses: {', '.join(valid_statuses)}")
+
+    shipment.status = target_status
+    if target_status == "SHIPPED" and not shipment.shipped_at:
         shipment.shipped_at = datetime.now(timezone.utc)
-    elif new_status.upper() == "DELIVERED":
+    elif target_status == "DELIVERED":
         shipment.actual_delivery_date = datetime.now(timezone.utc).date()
 
     await session.commit()

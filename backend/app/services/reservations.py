@@ -23,6 +23,9 @@ async def reserve_stock_for_quotation(
     if not quotation:
         raise NotFoundException(f"Quotation {quotation_id} not found")
 
+    if quotation.status in ["rejected", "cancelled", "expired"]:
+        raise BusinessRuleViolationException(f"Cannot reserve inventory for quotation in status '{quotation.status}'.")
+
     # 2. Fetch quotation items
     items_stmt = select(QuotationItem).where(QuotationItem.quotation_id == quotation_id)
     items = list((await session.execute(items_stmt)).scalars().all())

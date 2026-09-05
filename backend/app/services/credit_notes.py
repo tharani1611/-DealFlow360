@@ -13,15 +13,43 @@ from app.core.exceptions import NotFoundException, BusinessRuleViolationExceptio
 
 
 async def generate_credit_note_number(session: AsyncSession, organization_id: uuid.UUID) -> str:
-    stmt = select(func.count(CreditNote.id)).where(CreditNote.organization_id == organization_id)
-    count = int((await session.execute(stmt)).scalar() or 0) + 1
-    return f"CN-{count:06d}"
+    stmt = (
+        select(CreditNote.credit_note_number)
+        .where(CreditNote.organization_id == organization_id)
+        .order_by(CreditNote.created_at.desc(), CreditNote.credit_note_number.desc())
+        .limit(20)
+    )
+    references = (await session.execute(stmt)).scalars().all()
+    max_num = 0
+    for ref in references:
+        if ref and ref.startswith("CN-"):
+            try:
+                num = int(ref.replace("CN-", "").strip())
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                continue
+    return f"CN-{max_num + 1:06d}"
 
 
 async def generate_refund_number(session: AsyncSession, organization_id: uuid.UUID) -> str:
-    stmt = select(func.count(PaymentRefund.id)).where(PaymentRefund.organization_id == organization_id)
-    count = int((await session.execute(stmt)).scalar() or 0) + 1
-    return f"RFD-{count:06d}"
+    stmt = (
+        select(PaymentRefund.refund_number)
+        .where(PaymentRefund.organization_id == organization_id)
+        .order_by(PaymentRefund.created_at.desc(), PaymentRefund.refund_number.desc())
+        .limit(20)
+    )
+    references = (await session.execute(stmt)).scalars().all()
+    max_num = 0
+    for ref in references:
+        if ref and ref.startswith("RFD-"):
+            try:
+                num = int(ref.replace("RFD-", "").strip())
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                continue
+    return f"RFD-{max_num + 1:06d}"
 
 
 async def create_credit_note(
@@ -30,8 +58,12 @@ async def create_credit_note(
     payload: CreditNoteCreateRequest,
     current_user: Optional[User] = None,
 ) -> CreditNote:
-    # 1. Fetch & validate invoice
-    inv_stmt = select(Invoice).where(Invoice.id == payload.invoice_id, Invoice.organization_id == organization_id)
+    # 1. Fetch & validate invoice with row-level lock
+    inv_stmt = (
+        select(Invoice)
+        .where(Invoice.id == payload.invoice_id, Invoice.organization_id == organization_id)
+        .with_for_update()
+    )
     invoice = (await session.execute(inv_stmt)).scalar_one_or_none()
     if not invoice:
         raise NotFoundException(f"Invoice {payload.invoice_id} not found")
@@ -105,8 +137,12 @@ async def record_payment_refund(
     payload: PaymentRefundCreateRequest,
     current_user: Optional[User] = None,
 ) -> PaymentRefund:
-    # 1. Fetch & validate payment
-    pay_stmt = select(Payment).where(Payment.id == payload.payment_id, Payment.organization_id == organization_id)
+    # 1. Fetch & validate payment with row-level lock
+    pay_stmt = (
+        select(Payment)
+        .where(Payment.id == payload.payment_id, Payment.organization_id == organization_id)
+        .with_for_update()
+    )
     payment = (await session.execute(pay_stmt)).scalar_one_or_none()
     if not payment:
         raise NotFoundException(f"Payment {payload.payment_id} not found")

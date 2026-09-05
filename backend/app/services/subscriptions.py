@@ -34,9 +34,23 @@ def calculate_next_billing_date(start: date, interval: str) -> date:
 
 
 async def generate_subscription_number(session: AsyncSession, organization_id: uuid.UUID) -> str:
-    stmt = select(func.count(Subscription.id)).where(Subscription.organization_id == organization_id)
-    count = int((await session.execute(stmt)).scalar() or 0) + 1
-    return f"SUB-{count:06d}"
+    stmt = (
+        select(Subscription.subscription_number)
+        .where(Subscription.organization_id == organization_id)
+        .order_by(Subscription.created_at.desc(), Subscription.subscription_number.desc())
+        .limit(20)
+    )
+    references = (await session.execute(stmt)).scalars().all()
+    max_num = 0
+    for ref in references:
+        if ref and ref.startswith("SUB-"):
+            try:
+                num = int(ref.replace("SUB-", "").strip())
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                continue
+    return f"SUB-{max_num + 1:06d}"
 
 
 from sqlalchemy.orm import selectinload
