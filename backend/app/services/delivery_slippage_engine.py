@@ -35,16 +35,65 @@ class DeliverySlippageEngine:
         at_risk_count = 0
         delayed_count = 0
 
+        if not promises:
+            return DeliverySlippageResponse(
+                organization_id=organization_id,
+                total_promises_count=0,
+                at_risk_count=0,
+                delayed_count=0,
+                deliveries=[],
+                generated_at=now_utc,
+            )
+
+        quote_ids = [dp.quotation_id for dp in promises]
+
+        # Batch prefetch quotations
+        quote_map = {}
+        if quote_ids:
+            q_stmt = select(Quotation).where(Quotation.id.in_(quote_ids), Quotation.organization_id == organization_id)
+            quotes = list((await session.execute(q_stmt)).scalars().all())
+            quote_map = {q.id: q for q in quotes}
+
+        # Batch prefetch customers
+        cust_ids = list({q.customer_id for q in quote_map.values() if q.customer_id})
+        cust_map = {}
+        if cust_ids:
+            c_stmt = select(Customer.id, Customer.name).where(
+                Customer.organization_id == organization_id,
+                Customer.id.in_(cust_ids),
+            )
+            cust_rows = (await session.execute(c_stmt)).all()
+            cust_map = {r.id: r.name for r in cust_rows}
+
+        # Batch prefetch open backorders
+        bo_map = {}
+        if quote_ids:
+            bo_stmt = select(Backorder).where(
+                Backorder.organization_id == organization_id,
+                Backorder.quotation_id.in_(quote_ids),
+                Backorder.status.in_(["OPEN", "PARTIALLY_FULFILLED"]),
+            )
+            bo_rows = list((await session.execute(bo_stmt)).scalars().all())
+            for bo in bo_rows:
+                bo_map.setdefault(bo.quotation_id, []).append(bo)
+
+        # Batch prefetch shipments
+        ship_map = {}
+        if quote_ids:
+            ship_stmt = select(Shipment).where(
+                Shipment.organization_id == organization_id,
+                Shipment.quotation_id.in_(quote_ids),
+            )
+            ship_rows = list((await session.execute(ship_stmt)).scalars().all())
+            for s in ship_rows:
+                ship_map.setdefault(s.quotation_id, []).append(s)
+
         for dp in promises:
-            # Quotation & Customer lookup
-            q_stmt = select(Quotation).where(Quotation.id == dp.quotation_id, Quotation.organization_id == organization_id)
-            quotation = (await session.execute(q_stmt)).scalar_one_or_none()
+            quotation = quote_map.get(dp.quotation_id)
             if not quotation:
                 continue
 
-            cust_stmt = select(Customer).where(Customer.id == quotation.customer_id, Customer.organization_id == organization_id)
-            customer = (await session.execute(cust_stmt)).scalar_one_or_none()
-            cust_name = customer.name if customer else "Unknown"
+            cust_name = cust_map.get(quotation.customer_id, "Unknown")
 
             promised_d = dp.promised_date if isinstance(dp.promised_date, date) else dp.promised_date.date()
             expected_d = dp.expected_date if isinstance(dp.expected_date, date) else dp.expected_date.date()
@@ -59,24 +108,13 @@ class DeliverySlippageEngine:
             root_cause = "Normal fulfillment progression"
             status = dp.status
 
-            # Check for open backorder impact
-            bo_stmt = select(Backorder).where(
-                Backorder.organization_id == organization_id,
-                Backorder.quotation_id == dp.quotation_id,
-                Backorder.status.in_(["OPEN", "PARTIALLY_FULFILLED"]),
-            )
-            backorders = list((await session.execute(bo_stmt)).scalars().all())
+            backorders = bo_map.get(dp.quotation_id, [])
             if backorders:
                 status = "AT_RISK" if slippage <= 3 else "DELAYED"
                 root_cause = f"Open backorder ({len(backorders)} item(s) awaiting stock arrival)"
                 evidence.append(f"{len(backorders)} line item(s) currently backordered.")
 
-            # Check for shipment progress
-            ship_stmt = select(Shipment).where(
-                Shipment.organization_id == organization_id,
-                Shipment.quotation_id == dp.quotation_id,
-            )
-            shipments = list((await session.execute(ship_stmt)).scalars().all())
+            shipments = ship_map.get(dp.quotation_id, [])
 
             if not shipments and not backorders and today_utc > (promised_d - timedelta(days=3)):
                 if status != "DELIVERED":

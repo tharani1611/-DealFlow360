@@ -41,36 +41,72 @@ class StalledQuoteEngine:
         stalled_items: List[StalledQuoteItem] = []
         total_value = Decimal("0.00")
 
+        if not quotations:
+            return StalledQuotesResponse(
+                organization_id=organization_id,
+                total_stalled_count=0,
+                total_stalled_value=Decimal("0.00"),
+                critical_count=0,
+                stalled_count=0,
+                aging_count=0,
+                stalled_quotes=[],
+                generated_at=now_utc,
+            )
+
+        quote_ids = [q.id for q in quotations]
+        customer_ids = list({q.customer_id for q in quotations if q.customer_id})
+
+        # Batch prefetch pending change requests
+        cr_stmt = select(QuotationChangeRequest.quotation_id).where(
+            QuotationChangeRequest.organization_id == organization_id,
+            QuotationChangeRequest.quotation_id.in_(quote_ids),
+            QuotationChangeRequest.status == "PENDING",
+        )
+        pending_cr_set = set((await session.execute(cr_stmt)).scalars().all())
+
+        # Batch prefetch pending approvals
+        app_stmt = select(QuotationApproval).where(
+            QuotationApproval.organization_id == organization_id,
+            QuotationApproval.quotation_id.in_(quote_ids),
+            QuotationApproval.status == "PENDING",
+        )
+        pending_apps = (await session.execute(app_stmt)).scalars().all()
+        pending_app_map = {app.quotation_id: app for app in pending_apps}
+
+        # Batch prefetch customer names
+        cust_map = {}
+        if customer_ids:
+            cust_stmt = select(Customer.id, Customer.name).where(
+                Customer.organization_id == organization_id,
+                Customer.id.in_(customer_ids),
+            )
+            cust_rows = (await session.execute(cust_stmt)).all()
+            cust_map = {r.id: r.name for r in cust_rows}
+
+        # Batch prefetch activities
+        act_stmt = select(Activity).where(
+            Activity.organization_id == organization_id,
+            Activity.quotation_id.in_(quote_ids),
+        )
+        act_rows = (await session.execute(act_stmt)).scalars().all()
+        act_map = {}
+        for act in act_rows:
+            if act.quotation_id:
+                act_map.setdefault(act.quotation_id, []).append(act)
+
         for q in quotations:
             # Check for active customer change request being processed
-            cr_stmt = select(QuotationChangeRequest).where(
-                QuotationChangeRequest.organization_id == organization_id,
-                QuotationChangeRequest.quotation_id == q.id,
-                QuotationChangeRequest.status == "PENDING",
-            )
-            has_pending_cr = (await session.execute(cr_stmt)).scalars().first() is not None
-            if has_pending_cr:
+            if q.id in pending_cr_set:
                 continue  # Legitimately active negotiation process
 
             # Check for pending executive approval
-            app_stmt = select(QuotationApproval).where(
-                QuotationApproval.organization_id == organization_id,
-                QuotationApproval.quotation_id == q.id,
-                QuotationApproval.status == "PENDING",
-            )
-            pending_approval = (await session.execute(app_stmt)).scalars().first()
+            pending_approval = pending_app_map.get(q.id)
 
             # Customer name lookup
-            cust_stmt = select(Customer).where(Customer.id == q.customer_id, Customer.organization_id == organization_id)
-            customer = (await session.execute(cust_stmt)).scalar_one_or_none()
-            cust_name = customer.name if customer else "Unknown"
+            cust_name = cust_map.get(q.customer_id, "Unknown")
 
             # Customer activities lookup
-            act_stmt = select(Activity).where(
-                Activity.organization_id == organization_id,
-                Activity.quotation_id == q.id,
-            )
-            activities = list((await session.execute(act_stmt)).scalars().all())
+            activities = act_map.get(q.id, [])
 
             last_act_at: Optional[datetime] = None
             last_cust_act_at: Optional[datetime] = None
@@ -122,7 +158,7 @@ class StalledQuoteEngine:
                 rec_action = "Finalize pricing and issue quote or archive draft."
 
             if is_stalled:
-                q_date = q.quotation_date if isinstance(q.quotation_date, date) else q.quotation_date.date() if q.quotation_date else date.today()
+                q_date = q.quotation_date.date() if isinstance(q.quotation_date, datetime) else (q.quotation_date if isinstance(q.quotation_date, date) else date.today())
                 stalled_items.append(StalledQuoteItem(
                     quotation_id=q.id,
                     quotation_number=q.quotation_number,

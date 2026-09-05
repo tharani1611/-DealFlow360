@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone, date, timedelta
 from decimal import Decimal
 from typing import List, Optional, Tuple, Dict, Any
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, case, cast, Numeric
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.deal import Deal
@@ -67,23 +67,29 @@ class ReportingEngine:
         st_date, ed_date = ReportingEngine.resolve_date_range(period, start_date, end_date)
         now_utc = datetime.now(timezone.utc)
 
-        # 1. Sales Domain
-        d_stmt = select(Deal).where(Deal.organization_id == organization_id)
-        deals = list((await session.execute(d_stmt)).scalars().all())
+        # 1. Sales Domain via SQL aggregations
+        d_stmt = select(
+            func.coalesce(func.sum(case((Deal.status == "open", Deal.value), else_=Decimal("0.00"))), Decimal("0.00")).label("tot_pipeline"),
+            func.coalesce(func.sum(case((Deal.status == "open", Deal.value * cast(Deal.probability, Numeric) / Decimal("100.00")), else_=Decimal("0.00"))), Decimal("0.00")).label("weighted_pipeline"),
+            func.coalesce(func.sum(case((Deal.status == "won", Deal.value), else_=Decimal("0.00"))), Decimal("0.00")).label("won_revenue"),
+            func.coalesce(func.sum(case((Deal.status == "lost", Deal.value), else_=Decimal("0.00"))), Decimal("0.00")).label("lost_revenue"),
+            func.count(case((Deal.status == "open", 1))).label("open_cnt"),
+            func.count(case((Deal.status == "won", 1))).label("won_cnt"),
+            func.count(case((Deal.status == "lost", 1))).label("lost_cnt"),
+        ).where(Deal.organization_id == organization_id)
+        d_res = (await session.execute(d_stmt)).one()
 
-        open_deals = [d for d in deals if d.status == "open"]
-        won_deals = [d for d in deals if d.status == "won"]
-        lost_deals = [d for d in deals if d.status == "lost"]
+        tot_pipeline = Decimal(str(d_res.tot_pipeline))
+        weighted_pipeline = Decimal(str(d_res.weighted_pipeline))
+        won_revenue = Decimal(str(d_res.won_revenue))
+        lost_revenue = Decimal(str(d_res.lost_revenue))
+        open_cnt = int(d_res.open_cnt or 0)
+        won_cnt = int(d_res.won_cnt or 0)
+        lost_cnt = int(d_res.lost_cnt or 0)
 
-        tot_pipeline = sum((d.value for d in open_deals), Decimal("0.00"))
-        weighted_pipeline = sum((d.value * Decimal(str(d.probability)) / Decimal("100.00") for d in open_deals), Decimal("0.00"))
-        won_revenue = sum((d.value for d in won_deals), Decimal("0.00"))
-        lost_revenue = sum((d.value for d in lost_deals), Decimal("0.00"))
-
-        closed_cnt = len(won_deals) + len(lost_deals)
-        win_rate = (Decimal(str(len(won_deals))) / Decimal(str(closed_cnt))) * Decimal("100.00") if closed_cnt > 0 else Decimal("0.00")
-        avg_deal_val = tot_pipeline / Decimal(str(len(open_deals))) if open_deals else Decimal("0.00")
-
+        closed_cnt = won_cnt + lost_cnt
+        win_rate = (Decimal(str(won_cnt)) / Decimal(str(closed_cnt))) * Decimal("100.00") if closed_cnt > 0 else Decimal("0.00")
+        avg_deal_val = tot_pipeline / Decimal(str(open_cnt)) if open_cnt > 0 else Decimal("0.00")
         sales_cycle_days = Decimal("21.5")  # Standard benchmark cycle
 
         sales_report = ReportDomainSales(
@@ -94,25 +100,36 @@ class ReportingEngine:
             win_rate_percent=Decimal(f"{win_rate:.2f}"),
             average_deal_value=Decimal(f"{avg_deal_val:.2f}"),
             sales_cycle_days=sales_cycle_days,
-            open_deal_count=len(open_deals),
-            won_deal_count=len(won_deals),
-            lost_deal_count=len(lost_deals),
+            open_deal_count=open_cnt,
+            won_deal_count=won_cnt,
+            lost_deal_count=lost_cnt,
         )
 
-        # 2. Quotations Domain
-        q_stmt = select(Quotation).where(Quotation.organization_id == organization_id)
-        quotations = list((await session.execute(q_stmt)).scalars().all())
+        # 2. Quotations Domain via SQL aggregations
+        q_stmt = select(
+            func.count(Quotation.id).label("total_q_cnt"),
+            func.count(case((Quotation.status == "draft", 1))).label("draft_cnt"),
+            func.count(case((Quotation.status == "sent", 1))).label("sent_cnt"),
+            func.count(case((Quotation.status == "accepted", 1))).label("accepted_cnt"),
+            func.count(case((Quotation.status == "rejected", 1))).label("rejected_cnt"),
+            func.count(case((Quotation.status == "expired", 1))).label("expired_cnt"),
+            func.coalesce(func.sum(Quotation.total_amount), Decimal("0.00")).label("tot_q_val"),
+            func.coalesce(func.sum(Quotation.discount_amount), Decimal("0.00")).label("disc_tot"),
+            func.coalesce(func.sum(Quotation.subtotal), Decimal("0.00")).label("sub_tot"),
+        ).where(Quotation.organization_id == organization_id)
+        q_res = (await session.execute(q_stmt)).one()
 
-        draft_cnt = sum(1 for q in quotations if q.status == "draft")
-        sent_cnt = sum(1 for q in quotations if q.status == "sent")
-        accepted_cnt = sum(1 for q in quotations if q.status == "accepted")
-        rejected_cnt = sum(1 for q in quotations if q.status == "rejected")
-        expired_cnt = sum(1 for q in quotations if q.status == "expired")
+        total_q_cnt = int(q_res.total_q_cnt or 0)
+        draft_cnt = int(q_res.draft_cnt or 0)
+        sent_cnt = int(q_res.sent_cnt or 0)
+        accepted_cnt = int(q_res.accepted_cnt or 0)
+        rejected_cnt = int(q_res.rejected_cnt or 0)
+        expired_cnt = int(q_res.expired_cnt or 0)
+        tot_q_val = Decimal(str(q_res.tot_q_val))
+        disc_tot = Decimal(str(q_res.disc_tot))
+        sub_tot = Decimal(str(q_res.sub_tot))
 
-        total_q_cnt = len(quotations)
         conv_rate = (Decimal(str(accepted_cnt)) / Decimal(str(total_q_cnt))) * Decimal("100.00") if total_q_cnt > 0 else Decimal("0.00")
-
-        tot_q_val = sum((q.total_amount for q in quotations), Decimal("0.00"))
         avg_q_val = tot_q_val / Decimal(str(total_q_cnt)) if total_q_cnt > 0 else Decimal("0.00")
 
         quotations_report = ReportDomainQuotations(
@@ -130,13 +147,10 @@ class ReportingEngine:
         gross_rev = won_revenue
         gross_margin = gross_rev * Decimal("0.42")  # Deterministic 42% margin baseline
         margin_pct = Decimal("42.00") if gross_rev > Decimal("0.00") else Decimal("0.00")
-
-        disc_tot = sum((q.discount_amount for q in quotations), Decimal("0.00"))
-        sub_tot = sum((q.subtotal for q in quotations), Decimal("0.00"))
         avg_disc_pct = (disc_tot / sub_tot) * Decimal("100.00") if sub_tot > Decimal("0.00") else Decimal("0.00")
 
-        app_stmt = select(QuotationApproval).where(QuotationApproval.organization_id == organization_id, QuotationApproval.status == "PENDING")
-        pending_app_cnt = len(list((await session.execute(app_stmt)).scalars().all()))
+        app_stmt = select(func.count(QuotationApproval.id)).where(QuotationApproval.organization_id == organization_id, QuotationApproval.status == "PENDING")
+        pending_app_cnt = int((await session.execute(app_stmt)).scalar() or 0)
 
         commercial_report = ReportDomainCommercial(
             gross_revenue=gross_rev,
@@ -148,50 +162,60 @@ class ReportingEngine:
             pending_approval_count=pending_app_cnt,
         )
 
-        # 4. Fulfillment Domain
-        stk_stmt = select(InventoryStock).where(InventoryStock.organization_id == organization_id)
-        stocks = list((await session.execute(stk_stmt)).scalars().all())
+        # 4. Fulfillment Domain via SQL aggregations
+        stk_stmt = select(
+            func.coalesce(func.sum(InventoryStock.on_hand_quantity), 0).label("tot_on_hand"),
+            func.coalesce(func.sum(InventoryStock.reserved_quantity), 0).label("tot_reserved"),
+        ).where(InventoryStock.organization_id == organization_id)
+        stk_res = (await session.execute(stk_stmt)).one()
 
-        tot_stk_val = sum((Decimal(str(s.on_hand_quantity)) * Decimal("100.00") for s in stocks), Decimal("0.00"))
-        res_stk_val = sum((Decimal(str(s.reserved_quantity)) * Decimal("100.00") for s in stocks), Decimal("0.00"))
+        tot_stk_val = Decimal(str(stk_res.tot_on_hand)) * Decimal("100.00")
+        res_stk_val = Decimal(str(stk_res.tot_reserved)) * Decimal("100.00")
 
-        ship_stmt = select(Shipment).where(Shipment.organization_id == organization_id)
-        shipments = list((await session.execute(ship_stmt)).scalars().all())
+        ship_cnt_stmt = select(func.count(Shipment.id)).where(Shipment.organization_id == organization_id)
+        active_shipment_count = int((await session.execute(ship_cnt_stmt)).scalar() or 0)
 
-        bo_stmt = select(Backorder).where(Backorder.organization_id == organization_id, Backorder.status.in_(["OPEN", "PARTIALLY_FULFILLED"]))
-        backorders = list((await session.execute(bo_stmt)).scalars().all())
+        bo_cnt_stmt = select(func.count(Backorder.id)).where(Backorder.organization_id == organization_id, Backorder.status.in_(["OPEN", "PARTIALLY_FULFILLED"]))
+        open_backorder_count = int((await session.execute(bo_cnt_stmt)).scalar() or 0)
 
-        dp_stmt = select(DeliveryPromise).where(DeliveryPromise.organization_id == organization_id)
-        promises = list((await session.execute(dp_stmt)).scalars().all())
-        met_cnt = sum(1 for dp in promises if dp.status == "MET" or dp.status == "ON_TIME")
-        tot_dp = len(promises)
+        dp_stmt = select(
+            func.count(DeliveryPromise.id).label("tot_dp"),
+            func.count(case((DeliveryPromise.status.in_(["MET", "ON_TIME"]), 1))).label("met_cnt"),
+        ).where(DeliveryPromise.organization_id == organization_id)
+        dp_res = (await session.execute(dp_stmt)).one()
+
+        tot_dp = int(dp_res.tot_dp or 0)
+        met_cnt = int(dp_res.met_cnt or 0)
         on_time_rate = (Decimal(str(met_cnt)) / Decimal(str(tot_dp))) * Decimal("100.00") if tot_dp > 0 else Decimal("100.00")
 
         fulfillment_report = ReportDomainFulfillment(
             total_stock_value=tot_stk_val,
             reserved_stock_value=res_stk_val,
-            active_shipment_count=len(shipments),
-            open_backorder_count=len(backorders),
+            active_shipment_count=active_shipment_count,
+            open_backorder_count=open_backorder_count,
             on_time_delivery_rate_percent=Decimal(f"{on_time_rate:.2f}"),
             average_slippage_days=Decimal("0.5"),
         )
 
-        # 5. Billing Domain
-        inv_stmt = select(Invoice).where(Invoice.organization_id == organization_id, Invoice.status != "VOID")
-        invoices = list((await session.execute(inv_stmt)).scalars().all())
+        # 5. Billing Domain via SQL aggregations
+        inv_stmt = select(
+            func.coalesce(func.sum(Invoice.total), Decimal("0.00")).label("tot_invoiced"),
+            func.coalesce(func.sum(Invoice.amount_paid), Decimal("0.00")).label("tot_collected"),
+            func.coalesce(func.sum(Invoice.amount_due), Decimal("0.00")).label("outstanding_rec"),
+            func.coalesce(func.sum(case((Invoice.due_date < ed_date, Invoice.amount_due), else_=Decimal("0.00"))), Decimal("0.00")).label("overdue_rec"),
+        ).where(Invoice.organization_id == organization_id, Invoice.status != "VOID")
+        inv_res = (await session.execute(inv_stmt)).one()
 
-        tot_invoiced = sum((inv.total for inv in invoices), Decimal("0.00"))
-        tot_collected = sum((inv.amount_paid for inv in invoices), Decimal("0.00"))
-        outstanding_rec = sum((inv.amount_due for inv in invoices), Decimal("0.00"))
-        overdue_rec = sum((inv.amount_due for inv in invoices if inv.due_date < ed_date), Decimal("0.00"))
+        tot_invoiced = Decimal(str(inv_res.tot_invoiced))
+        tot_collected = Decimal(str(inv_res.tot_collected))
+        outstanding_rec = Decimal(str(inv_res.outstanding_rec))
+        overdue_rec = Decimal(str(inv_res.overdue_rec))
 
-        cn_stmt = select(CreditNote).where(CreditNote.organization_id == organization_id, CreditNote.status != "VOID")
-        credit_notes = list((await session.execute(cn_stmt)).scalars().all())
-        tot_credits = sum((cn.total for cn in credit_notes), Decimal("0.00"))
+        cn_stmt = select(func.coalesce(func.sum(CreditNote.total), Decimal("0.00"))).where(CreditNote.organization_id == organization_id, CreditNote.status != "VOID")
+        tot_credits = Decimal(str((await session.execute(cn_stmt)).scalar() or "0.00"))
 
-        ref_stmt = select(PaymentRefund).where(PaymentRefund.organization_id == organization_id, PaymentRefund.status == "PROCESSED")
-        refunds = list((await session.execute(ref_stmt)).scalars().all())
-        tot_refunds = sum((ref.amount for ref in refunds), Decimal("0.00"))
+        ref_stmt = select(func.coalesce(func.sum(PaymentRefund.amount), Decimal("0.00"))).where(PaymentRefund.organization_id == organization_id, PaymentRefund.status == "PROCESSED")
+        tot_refunds = Decimal(str((await session.execute(ref_stmt)).scalar() or "0.00"))
 
         billing_report = ReportDomainBilling(
             total_invoiced=tot_invoiced,
@@ -219,18 +243,18 @@ class ReportingEngine:
 
         arr = mrr * Decimal("12.00")
 
-        canc_stmt = select(SubscriptionCancellation).where(SubscriptionCancellation.organization_id == organization_id)
-        cancellations = list((await session.execute(canc_stmt)).scalars().all())
+        canc_stmt = select(func.count(SubscriptionCancellation.id)).where(SubscriptionCancellation.organization_id == organization_id)
+        canc_cnt = int((await session.execute(canc_stmt)).scalar() or 0)
 
         tot_subs_cnt = len(subscriptions)
-        churn_rate = (Decimal(str(len(cancellations))) / Decimal(str(tot_subs_cnt))) * Decimal("100.00") if tot_subs_cnt > 0 else Decimal("0.00")
+        churn_rate = (Decimal(str(canc_cnt)) / Decimal(str(tot_subs_cnt))) * Decimal("100.00") if tot_subs_cnt > 0 else Decimal("0.00")
 
         subscription_report = ReportDomainSubscription(
             active_subscriptions_count=len(active_subs),
             monthly_recurring_revenue=Decimal(f"{mrr:.2f}"),
             annual_recurring_revenue=Decimal(f"{arr:.2f}"),
             new_subscriptions_count=len(subscriptions),
-            cancelled_subscriptions_count=len(cancellations),
+            cancelled_subscriptions_count=canc_cnt,
             churn_rate_percent=Decimal(f"{churn_rate:.2f}"),
         )
 

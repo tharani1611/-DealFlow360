@@ -55,20 +55,50 @@ class DiscountAnomalyEngine:
 
         anomalies: List[DiscountAnomalyItem] = []
 
+        if not active_quotes:
+            return DiscountAnomaliesResponse(
+                organization_id=organization_id,
+                total_evaluated_count=0,
+                anomalous_count=0,
+                critical_count=0,
+                anomalies=[],
+                organization_baseline_discount_percent=org_avg_discount,
+                generated_at=now_utc,
+            )
+
+        customer_ids = list({q.customer_id for q in active_quotes if q.customer_id})
+
+        # Batch prefetch past accepted/converted quotes for customers
+        past_quotes_map = {}
+        if customer_ids:
+            past_q_stmt = select(Quotation).where(
+                Quotation.organization_id == organization_id,
+                Quotation.customer_id.in_(customer_ids),
+                Quotation.status.in_(["accepted", "converted"]),
+            )
+            past_quotes = list((await session.execute(past_q_stmt)).scalars().all())
+            for pq in past_quotes:
+                past_quotes_map.setdefault(pq.customer_id, []).append(pq)
+
+        # Batch prefetch customer names
+        cust_map = {}
+        if customer_ids:
+            cust_stmt = select(Customer.id, Customer.name).where(
+                Customer.organization_id == organization_id,
+                Customer.id.in_(customer_ids),
+            )
+            cust_rows = (await session.execute(cust_stmt)).all()
+            cust_map = {r.id: r.name for r in cust_rows}
+
         for q in active_quotes:
             if q.subtotal == Decimal("0.00"):
                 continue
 
             blended_disc_pct = (q.discount_amount / q.subtotal) * Decimal("100.00")
 
-            # Historical customer baseline
-            cust_q_stmt = select(Quotation).where(
-                Quotation.organization_id == organization_id,
-                Quotation.customer_id == q.customer_id,
-                Quotation.id != q.id,
-                Quotation.status.in_(["accepted", "converted"]),
-            )
-            cust_past_quotes = list((await session.execute(cust_q_stmt)).scalars().all())
+            # Historical customer baseline from prefetch
+            all_cust_past = past_quotes_map.get(q.customer_id, [])
+            cust_past_quotes = [pq for pq in all_cust_past if pq.id != q.id]
 
             cust_sample_size = len(cust_past_quotes)
             insufficient_data = cust_sample_size < 2
@@ -101,10 +131,7 @@ class DiscountAnomalyEngine:
                 severity = "NORMAL"
 
             if severity in ("WATCH", "ANOMALOUS", "CRITICAL"):
-                # Customer name lookup
-                cust_stmt = select(Customer).where(Customer.id == q.customer_id, Customer.organization_id == organization_id)
-                customer = (await session.execute(cust_stmt)).scalar_one_or_none()
-                cust_name = customer.name if customer else "Unknown"
+                cust_name = cust_map.get(q.customer_id, "Unknown")
 
                 evidence: List[str] = [
                     f"Quotation discount is {blended_disc_pct:.2f}% (Total discount: ${q.discount_amount:,.2f})",

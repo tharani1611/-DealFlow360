@@ -40,7 +40,8 @@ async def generate_deal_number(db: AsyncSession, organization_id: uuid.UUID) -> 
             Deal.organization_id == organization_id,
             Deal.deal_number.like("DEAL-%")
         )
-        .order_by(Deal.created_at.desc())
+        .order_by(Deal.created_at.desc(), Deal.deal_number.desc())
+        .limit(20)
     )
     result = await db.execute(stmt)
     numbers = result.scalars().all()
@@ -53,6 +54,10 @@ async def generate_deal_number(db: AsyncSession, organization_id: uuid.UUID) -> 
                 max_num = num_part
         except ValueError:
             continue
+
+    if max_num == 0:
+        count_stmt = select(func.count(Deal.id)).where(Deal.organization_id == organization_id)
+        max_num = int((await db.execute(count_stmt)).scalar() or 0)
 
     next_num = max_num + 1
     return f"DEAL-{next_num:06d}"

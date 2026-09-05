@@ -34,7 +34,8 @@ async def generate_quotation_number(db: AsyncSession, organization_id: uuid.UUID
             Quotation.organization_id == organization_id,
             Quotation.quotation_number.like("QT-%")
         )
-        .order_by(Quotation.created_at.desc())
+        .order_by(Quotation.created_at.desc(), Quotation.quotation_number.desc())
+        .limit(20)
     )
     result = await db.execute(stmt)
     numbers = result.scalars().all()
@@ -47,6 +48,10 @@ async def generate_quotation_number(db: AsyncSession, organization_id: uuid.UUID
                 max_num = num_part
         except ValueError:
             continue
+
+    if max_num == 0:
+        count_stmt = select(func.count(Quotation.id)).where(Quotation.organization_id == organization_id)
+        max_num = int((await db.execute(count_stmt)).scalar() or 0)
 
     next_num = max_num + 1
     return f"QT-{next_num:06d}"

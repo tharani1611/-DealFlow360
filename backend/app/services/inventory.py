@@ -166,20 +166,42 @@ async def calculate_quotation_availability(
     total_available = 0
     total_shortfall = 0
 
-    for item in items:
-        # Sum available stock across active warehouses for this product
-        stock_stmt = select(
-            func.coalesce(func.sum(InventoryStock.on_hand_quantity), 0).label("on_hand"),
-            func.coalesce(func.sum(InventoryStock.reserved_quantity), 0).label("reserved"),
-            func.coalesce(func.sum(InventoryStock.available_quantity), 0).label("available"),
-        ).where(
-            InventoryStock.organization_id == organization_id,
-            InventoryStock.product_id == item.product_id,
+    product_ids = list({item.product_id for item in items})
+    stock_map = {}
+    prod_map = {}
+
+    if product_ids:
+        stock_stmt = (
+            select(
+                InventoryStock.product_id,
+                func.coalesce(func.sum(InventoryStock.on_hand_quantity), 0).label("on_hand"),
+                func.coalesce(func.sum(InventoryStock.reserved_quantity), 0).label("reserved"),
+                func.coalesce(func.sum(InventoryStock.available_quantity), 0).label("available"),
+            )
+            .where(
+                InventoryStock.organization_id == organization_id,
+                InventoryStock.product_id.in_(product_ids),
+            )
+            .group_by(InventoryStock.product_id)
         )
-        stock_res = (await session.execute(stock_stmt)).one()
-        on_hand = int(stock_res.on_hand)
-        reserved = int(stock_res.reserved)
-        available = int(stock_res.available)
+        stock_rows = (await session.execute(stock_stmt)).all()
+        for r in stock_rows:
+            stock_map[r.product_id] = {
+                "on_hand": int(r.on_hand),
+                "reserved": int(r.reserved),
+                "available": int(r.available),
+            }
+
+        prod_stmt = select(Product.id, Product.name).where(Product.id.in_(product_ids))
+        prod_rows = (await session.execute(prod_stmt)).all()
+        for pr in prod_rows:
+            prod_map[pr.id] = pr.name
+
+    for item in items:
+        stk = stock_map.get(item.product_id, {"on_hand": 0, "reserved": 0, "available": 0})
+        on_hand = stk["on_hand"]
+        reserved = stk["reserved"]
+        available = stk["available"]
 
         req_qty = item.quantity
         shortfall = max(0, req_qty - available)
@@ -191,9 +213,7 @@ async def calculate_quotation_availability(
         else:
             status = "OUT_OF_STOCK"
 
-        # Fetch product name
-        prod_stmt = select(Product.name).where(Product.id == item.product_id)
-        prod_name = (await session.execute(prod_stmt)).scalar_one_or_none() or "Product"
+        prod_name = prod_map.get(item.product_id, "Product")
 
         line_availabilities.append(
             LineAvailabilityItem(

@@ -12,9 +12,26 @@ from app.core.exceptions import NotFoundException, BusinessRuleViolationExceptio
 
 
 async def generate_payment_reference(session: AsyncSession, organization_id: uuid.UUID) -> str:
-    stmt = select(func.count(Payment.id)).where(Payment.organization_id == organization_id)
-    count = int((await session.execute(stmt)).scalar() or 0) + 1
-    return f"PAY-{count:06d}"
+    stmt = (
+        select(Payment.payment_reference)
+        .where(Payment.organization_id == organization_id)
+        .order_by(Payment.created_at.desc(), Payment.payment_reference.desc())
+        .limit(20)
+    )
+    result = await session.execute(stmt)
+    references = result.scalars().all()
+
+    max_num = 0
+    for ref in references:
+        if ref and ref.startswith("PAY-"):
+            try:
+                num = int(ref.replace("PAY-", "").strip())
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                continue
+
+    return f"PAY-{max_num + 1:06d}"
 
 
 async def record_payment(
@@ -23,8 +40,11 @@ async def record_payment(
     payload: PaymentCreateRequest,
     current_user: Optional[User] = None,
 ) -> Payment:
-    # 1. Fetch & validate invoice
-    inv_stmt = select(Invoice).where(Invoice.id == payload.invoice_id, Invoice.organization_id == organization_id)
+    # 1. Fetch & validate invoice with row-level lock for concurrency safety
+    inv_stmt = select(Invoice).where(
+        Invoice.id == payload.invoice_id,
+        Invoice.organization_id == organization_id
+    ).with_for_update()
     invoice = (await session.execute(inv_stmt)).scalar_one_or_none()
     if not invoice:
         raise NotFoundException(f"Invoice {payload.invoice_id} not found")

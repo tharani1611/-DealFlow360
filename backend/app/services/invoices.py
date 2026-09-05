@@ -193,10 +193,16 @@ async def get_invoice(session: AsyncSession, organization_id: uuid.UUID, invoice
     return invoice
 
 
-async def list_invoices(session: AsyncSession, organization_id: uuid.UUID, customer_id: Optional[uuid.UUID] = None) -> List[Invoice]:
+async def list_invoices(
+    session: AsyncSession,
+    organization_id: uuid.UUID,
+    customer_id: Optional[uuid.UUID] = None,
+    skip: int = 0,
+    limit: int = 100,
+) -> List[Invoice]:
     stmt = select(Invoice).options(selectinload(Invoice.items)).where(Invoice.organization_id == organization_id)
     if customer_id:
         stmt = stmt.where(Invoice.customer_id == customer_id)
-    stmt = stmt.order_by(Invoice.created_at.desc())
+    stmt = stmt.order_by(Invoice.created_at.desc()).offset(skip).limit(min(limit, 500))
     return list((await session.execute(stmt)).scalars().all())
 

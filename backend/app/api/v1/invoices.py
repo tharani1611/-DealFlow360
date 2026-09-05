@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.api.deps import get_current_user
@@ -56,12 +56,16 @@ async def void_invoice(
 
 @router.get("", response_model=List[InvoiceResponse])
 async def list_invoices(
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(100, ge=1, le=500, description="Pagination page limit"),
     customer_id: Optional[uuid.UUID] = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Lists invoices for the user's organization."""
-    return await invoice_service.list_invoices(db, current_user.organization_id, customer_id)
+    return await invoice_service.list_invoices(
+        db, current_user.organization_id, customer_id=customer_id, skip=skip, limit=limit
+    )
 
 
 @router.get("/{invoice_id}", response_model=InvoiceResponse)
