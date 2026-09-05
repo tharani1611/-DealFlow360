@@ -54,26 +54,15 @@ async def generate_quotation_number(db: AsyncSession, organization_id: uuid.UUID
 
 def validate_status_transition(current_status: str, new_status: str) -> None:
     """Validates allowed state machine status transitions for Quotations."""
-    if current_status == new_status:
-        return
-
-    allowed_transitions = {
-        "draft": {"sent", "rejected"},
-        "sent": {"accepted", "rejected", "expired"},
-        "accepted": set(),
-        "rejected": set(),
-        "expired": set()
-    }
-
-    valid_targets = allowed_transitions.get(current_status, set())
-    if new_status not in valid_targets:
+    from app.services.quotation_state import can_transition
+    if not can_transition(current_status, new_status):
         raise BusinessRuleViolationException(
             f"Invalid quotation status transition from '{current_status}' to '{new_status}'."
         )
 
 
 async def verify_customer_in_tenant(db: AsyncSession, organization_id: uuid.UUID, customer_id: uuid.UUID) -> Customer:
-    """Verifies target customer exists within the user's organization."""
+    """Verifies target customer exists within the user's organization and is active."""
     stmt = select(Customer).where(
         Customer.id == customer_id,
         Customer.organization_id == organization_id
@@ -82,6 +71,8 @@ async def verify_customer_in_tenant(db: AsyncSession, organization_id: uuid.UUID
     customer = result.scalar_one_or_none()
     if not customer:
         raise NotFoundException("Target customer requested was not found")
+    if hasattr(customer, 'is_active') and not customer.is_active:
+        raise BusinessRuleViolationException("Target customer is inactive and cannot receive new quotations")
     return customer
 
 
@@ -124,7 +115,7 @@ async def verify_deal_in_tenant(
 
 
 async def verify_product_in_tenant(db: AsyncSession, organization_id: uuid.UUID, product_id: uuid.UUID) -> Product:
-    """Verifies target product exists within the user's organization."""
+    """Verifies target product exists within the user's organization and is active."""
     stmt = select(Product).where(
         Product.id == product_id,
         Product.organization_id == organization_id
@@ -133,6 +124,8 @@ async def verify_product_in_tenant(db: AsyncSession, organization_id: uuid.UUID,
     product = result.scalar_one_or_none()
     if not product:
         raise NotFoundException("Target product requested was not found")
+    if hasattr(product, 'is_active') and not product.is_active:
+        raise BusinessRuleViolationException(f"Product '{product.name}' is inactive and cannot be added to a quotation")
     return product
 
 
@@ -141,10 +134,12 @@ async def calculate_line_items_and_totals(
     organization_id: uuid.UUID,
     item_inputs: List[QuotationItemCreate],
     discount_amount: Decimal,
-    tax_amount: Decimal
+    tax_amount: Decimal,
+    customer_id: Optional[uuid.UUID] = None,
+    quotation_date: Optional[datetime] = None
 ) -> Tuple[List[QuotationItem], Decimal, Decimal]:
     """
-    Validates products, captures historical price & SKU snapshots, and calculates line totals, subtotal, and total amount.
+    Validates products, resolves pricing via Pricing Engine rules (or manual override), captures historical price & SKU snapshots, and calculates line totals, subtotal, and total amount.
     """
     if not item_inputs:
         raise BusinessRuleViolationException("Quotation must contain at least one item")
@@ -152,14 +147,39 @@ async def calculate_line_items_and_totals(
     items: List[QuotationItem] = []
     subtotal = Decimal("0.00")
 
-    for item_input in item_inputs:
+    for idx, item_input in enumerate(item_inputs):
         if item_input.quantity <= Decimal("0.00"):
             raise BusinessRuleViolationException("Item quantity must be greater than zero")
 
+        if item_input.unit_price is not None and item_input.unit_price < Decimal("0.00"):
+            raise BusinessRuleViolationException("Line item unit price cannot be negative")
+
         product = await verify_product_in_tenant(db, organization_id, item_input.product_id)
 
-        # HISTORICAL PRICE & SKU SNAPSHOT
-        unit_price = round_decimal(item_input.unit_price) if item_input.unit_price is not None else round_decimal(product.unit_price)
+        # Sequence assignment: use client sequence if provided, otherwise auto-sequence 1-indexed
+        seq = item_input.sequence if item_input.sequence > 0 else (idx + 1)
+
+        # HISTORICAL PRICE & SKU SNAPSHOT via PRICING ENGINE / MANUAL OVERRIDE
+        if item_input.unit_price is not None:
+            unit_price = round_decimal(item_input.unit_price)
+        else:
+            from app.services import pricing as pricing_service
+            from app.schemas.pricing import PricingCalculateRequest
+            pricing_res = await pricing_service.calculate_item_price(
+                db,
+                organization_id,
+                PricingCalculateRequest(
+                    product_id=product.id,
+                    quantity=item_input.quantity,
+                    customer_id=customer_id,
+                    quotation_date=quotation_date
+                )
+            )
+            unit_price = pricing_res.final_unit_price
+
+        # HISTORICAL COST SNAPSHOT
+        unit_cost = round_decimal(item_input.unit_cost) if item_input.unit_cost is not None else round_decimal(getattr(product, "unit_cost", Decimal("0.00")) or Decimal("0.00"))
+
         quantity = round_decimal(item_input.quantity)
         disc_amt = round_decimal(item_input.discount_amount)
         tax_amt = round_decimal(item_input.tax_amount)
@@ -173,9 +193,10 @@ async def calculate_line_items_and_totals(
             product_name=product.name,
             sku=product.sku,
             description=item_input.description.strip() if item_input.description else None,
-            sequence=item_input.sequence,
+            sequence=seq,
             quantity=quantity,
             unit_price=unit_price,
+            unit_cost=unit_cost,
             discount_percent=round_decimal(item_input.discount_percent),
             discount_amount=disc_amt,
             tax_rate=round_decimal(item_input.tax_rate),
@@ -206,7 +227,7 @@ async def create_quotation(
     current_user_id: Optional[uuid.UUID] = None
 ) -> Quotation:
     """Atomically creates a new Quotation with price-snapshot line items."""
-    # 1. Customer tenant security check
+    # 1. Customer tenant security check & active validation
     await verify_customer_in_tenant(db, organization_id, payload.customer_id)
 
     # 2. Optional Contact & Deal relationship security checks
@@ -216,18 +237,24 @@ async def create_quotation(
     if payload.deal_id:
         await verify_deal_in_tenant(db, organization_id, payload.customer_id, payload.deal_id)
 
-    # 3. Line calculations and historical price snapshots
+    # 3. Date validation: valid_until cannot be earlier than quotation_date
+    quot_date = payload.quotation_date or datetime.now(timezone.utc)
+    if payload.valid_until and payload.valid_until < quot_date:
+        raise BusinessRuleViolationException("Expiration date (valid_until) cannot be earlier than quotation issuance date")
+
+    # 4. Line calculations and historical price snapshots
     items, subtotal, total_amount = await calculate_line_items_and_totals(
         db,
         organization_id,
         payload.items,
         payload.discount_amount,
-        payload.tax_amount
+        payload.tax_amount,
+        customer_id=payload.customer_id,
+        quotation_date=quot_date
     )
 
-    # 4. Generate tenant-scoped quotation number
+    # 5. Generate tenant-scoped quotation number
     quotation_number = await generate_quotation_number(db, organization_id)
-    quot_date = payload.quotation_date or datetime.now(timezone.utc)
 
     quotation = Quotation(
         organization_id=organization_id,
@@ -253,6 +280,17 @@ async def create_quotation(
     try:
         db.add(quotation)
         await db.flush()
+
+        from app.services.quotation_state import log_state_history
+        await log_state_history(
+            db,
+            organization_id=organization_id,
+            quotation_id=quotation.id,
+            from_status=None,
+            to_status="draft",
+            changed_by_user_id=current_user_id,
+            reason="Initial draft created"
+        )
     except IntegrityError as exc:
         await db.rollback()
         error_msg = str(exc)
@@ -312,6 +350,10 @@ async def get_quotation_by_id(
     quotation = result.scalar_one_or_none()
     if not quotation:
         raise NotFoundException("Quotation requested was not found")
+
+    from app.services.quotation_state import check_lazy_expiration
+    await check_lazy_expiration(db, organization_id, quotation)
+
     return quotation
 
 
@@ -323,25 +365,43 @@ async def update_quotation(
     current_user_id: Optional[uuid.UUID] = None
 ) -> Quotation:
     """Updates an existing quotation within tenant scope."""
-    quotation = await get_quotation_by_id(db, organization_id, quotation_id)
-    finalized_statuses = {"accepted", "rejected", "expired"}
+    from app.services.quotation_state import is_status_immutable, log_state_history
 
-    # 1. If finalized, non-status updates are blocked
+    quotation = await get_quotation_by_id(db, organization_id, quotation_id)
     update_data = payload.model_dump(exclude_unset=True)
 
-    if quotation.status in finalized_statuses:
-        # Check if user is attempting to modify content fields
-        non_status_changes = set(update_data.keys()) - {"status"}
-        if non_status_changes:
+    # 1. Immutability checks for locked states
+    if is_status_immutable(quotation.status):
+        commercial_fields = {"items", "customer_id", "discount_amount", "tax_amount", "currency"}
+        attempted_commercial = set(update_data.keys()).intersection(commercial_fields)
+        if attempted_commercial:
             raise BusinessRuleViolationException(
-                f"Finalized quotation with status '{quotation.status}' cannot be modified."
+                f"Quotation with status '{quotation.status}' is locked. Cannot modify commercial fields ({', '.join(sorted(attempted_commercial))})."
             )
 
-    # 2. Validate status transition if status is being updated
+        if quotation.status in {"accepted", "rejected", "expired", "cancelled", "converted"}:
+            non_status_changes = set(update_data.keys()) - {"status"}
+            if non_status_changes:
+                raise BusinessRuleViolationException(
+                    f"Finalized quotation with status '{quotation.status}' cannot be modified."
+                )
+
+    # 2. Validate status transition and log history if status is being updated
+    old_status = quotation.status
     if "status" in update_data and update_data["status"] is not None:
         new_status = update_data["status"].strip().lower()
-        validate_status_transition(quotation.status, new_status)
-        quotation.status = new_status
+        if old_status != new_status:
+            validate_status_transition(old_status, new_status)
+            quotation.status = new_status
+            await log_state_history(
+                db,
+                organization_id=organization_id,
+                quotation_id=quotation.id,
+                from_status=old_status,
+                to_status=new_status,
+                changed_by_user_id=current_user_id,
+                reason="Updated via API update request"
+            )
 
     # 3. Customer, Contact, Deal reassignment validation
     target_customer_id = update_data.get("customer_id", quotation.customer_id)
@@ -388,7 +448,9 @@ async def update_quotation(
         tax = payload.tax_amount if tax_updated else quotation.tax_amount
 
         new_items, subtotal, total_amount = await calculate_line_items_and_totals(
-            db, organization_id, item_inputs, discount, tax
+            db, organization_id, item_inputs, discount, tax,
+            customer_id=target_customer_id,
+            quotation_date=quotation.quotation_date
         )
 
         quotation.items.clear()
@@ -413,6 +475,11 @@ async def update_quotation(
         quotation.discount_amount = discount
         quotation.tax_amount = tax
         quotation.total_amount = total_amount
+
+    # 6. Commercial edit invalidates existing approval
+    if items_updated or discount_updated or tax_updated or ("customer_id" in update_data):
+        from app.services.approval_engine import invalidate_quotation_approval
+        await invalidate_quotation_approval(db, organization_id, quotation.id)
 
     try:
         await db.flush()

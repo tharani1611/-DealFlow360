@@ -26,6 +26,6 @@ async def test_readiness_endpoint(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_not_implemented_module_endpoint(async_client: AsyncClient):
     """Verify placeholder module route returns 501 Not Implemented."""
-    response = await async_client.get("/api/v1/approvals")
+    response = await async_client.get("/api/v1/users")
     assert response.status_code == 501
     assert "foundation is prepared" in response.json()["detail"]

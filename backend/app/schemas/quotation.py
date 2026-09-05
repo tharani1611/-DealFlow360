@@ -11,6 +11,7 @@ class QuotationItemCreate(BaseModel):
     product_variant_id: Optional[uuid.UUID] = Field(None, description="Optional Product Variant UUID for future variant compatibility")
     quantity: Decimal = Field(..., gt=Decimal("0.00"), description="Line item quantity (must be > 0)")
     unit_price: Optional[Decimal] = Field(None, ge=Decimal("0.00"), description="Optional unit price override (defaults to current Product unit_price)")
+    unit_cost: Optional[Decimal] = Field(None, ge=Decimal("0.00"), description="Optional custom unit cost basis (defaults to current Product unit_cost)")
     description: Optional[str] = Field(None, description="Optional line item description")
     discount_percent: Decimal = Field(Decimal("0.00"), ge=Decimal("0.00"), le=Decimal("100.00"), description="Line-level discount percentage (0-100)")
     discount_amount: Decimal = Field(Decimal("0.00"), ge=Decimal("0.00"), description="Line-level discount amount")
@@ -31,6 +32,7 @@ class QuotationItemResponse(BaseModel):
     sequence: int = 0
     quantity: Decimal
     unit_price: Decimal
+    unit_cost: Decimal = Decimal("0.00")
     discount_percent: Decimal = Decimal("0.00")
     discount_amount: Decimal = Decimal("0.00")
     tax_rate: Decimal = Decimal("0.00")

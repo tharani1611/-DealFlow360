@@ -17,6 +17,7 @@ import { ActivitiesPage } from '../pages/ActivitiesPage';
 import { AIPage } from '../pages/AIPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { ForecastPage } from '../pages/ForecastPage';
+import { CommercialGovernancePage } from '../pages/CommercialGovernancePage';
 import { LoadingState } from '../components/ui/EmptyState';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -63,6 +64,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="deals/:id" element={<DealDetailPage />} />
         <Route path="activities" element={<ActivitiesPage />} />
         <Route path="forecast" element={<ForecastPage />} />
+        <Route path="governance" element={<CommercialGovernancePage />} />
         <Route path="ai" element={<AIPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

@@ -1,5 +1,5 @@
 import { fetchApi } from './apiClient';
-import { Quotation, QuotationCreate, QuotationUpdate } from '../types';
+import { Quotation, QuotationCreate, QuotationUpdate, QuotationStateHistoryItem, QuotationTransitionRequest } from '../types';
 
 export const quotationApi = {
   async getQuotations(params?: { customer_id?: string; status?: string; search?: string; limit?: number; offset?: number }): Promise<Quotation[]> {
@@ -32,9 +32,14 @@ export const quotationApi = {
     });
   },
 
-  async finalizeQuotation(id: string, action: 'accept' | 'reject' | 'cancel'): Promise<Quotation> {
-    return fetchApi<Quotation>(`/quotations/${id}/status?action=${action}`, {
+  async transitionQuotation(id: string, payload: QuotationTransitionRequest): Promise<Quotation> {
+    return fetchApi<Quotation>(`/quotations/${id}/transition`, {
       method: 'POST',
+      body: JSON.stringify(payload),
     });
+  },
+
+  async getQuotationHistory(id: string): Promise<QuotationStateHistoryItem[]> {
+    return fetchApi<QuotationStateHistoryItem[]>(`/quotations/${id}/history`);
   },
 };

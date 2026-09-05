@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from app.api.v1 import (
-    health, auth, customers, contacts, products, quotations, deals, activities, ai, intelligence, product_recommendation_rules
+    health, auth, customers, contacts, products, quotations, deals, activities, ai, intelligence, product_recommendation_rules, pricing, margins, discount_governance, discount_risk, approvals, copilot
 )
 
 api_router = APIRouter()
@@ -21,12 +21,16 @@ api_router.include_router(activities.router, prefix="/activities", tags=["Activi
 api_router.include_router(ai.router, prefix="/ai", tags=["AI Intelligence"])
 api_router.include_router(intelligence.router, prefix="/intelligence", tags=["CRM Intelligence"])
 api_router.include_router(product_recommendation_rules.router, prefix="/product-recommendation-rules", tags=["Product Recommendation Rules"])
+api_router.include_router(pricing.router, prefix="/pricing", tags=["Pricing Engine"])
+api_router.include_router(margins.router, prefix="/margins", tags=["Real-time Margin Engine"])
+api_router.include_router(discount_governance.router, prefix="/discount-governance", tags=["Discount Governance"])
+api_router.include_router(discount_risk.router, prefix="/discount-risk", tags=["Discount Risk Engine"])
+api_router.include_router(approvals.router, prefix="/approvals", tags=["Approval Engine"])
+api_router.include_router(copilot.router, prefix="/copilot", tags=["AI Sales Copilot"])
 
 # Module route prefixes specified in architecture
 MODULE_PREFIXES = [
     ("users", "User Management"),
-    ("pricing", "Pricing Engine"),
-    ("approvals", "Approval Center"),
     ("portal", "Customer Negotiation Portal"),
     ("fulfillment", "Fulfillment Engine"),
     ("backorders", "Backorder Queue"),

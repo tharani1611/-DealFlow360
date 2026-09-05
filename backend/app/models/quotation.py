@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     from app.models.deal import Deal
     from app.models.product import Product
     from app.models.user import User
+    from app.models.quotation_state import QuotationStateHistory
+    from app.models.quotation_approval import QuotationApproval
+
+
 
 
 class Quotation(Base, UUIDMixin, TimestampMixin):
@@ -100,6 +104,18 @@ class Quotation(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         order_by="QuotationItem.sequence, QuotationItem.created_at"
     )
+    state_history: Mapped[List["QuotationStateHistory"]] = relationship(
+        "QuotationStateHistory",
+        back_populates="quotation",
+        cascade="all, delete-orphan",
+        order_by="QuotationStateHistory.created_at.desc()"
+    )
+    approvals: Mapped[List["QuotationApproval"]] = relationship(
+        "QuotationApproval",
+        back_populates="quotation",
+        cascade="all, delete-orphan",
+        order_by="QuotationApproval.created_at.desc()"
+    )
 
 
 class QuotationItem(Base, UUIDMixin, TimestampMixin):
@@ -109,6 +125,7 @@ class QuotationItem(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         CheckConstraint("quantity > 0", name="ck_quotation_items_quantity_positive"),
         CheckConstraint("unit_price >= 0", name="ck_quotation_items_price_non_negative"),
+        CheckConstraint("unit_cost >= 0", name="ck_quotation_items_cost_non_negative"),
         CheckConstraint("line_total >= 0", name="ck_quotation_items_line_total_non_negative"),
         CheckConstraint("discount_percent >= 0 AND discount_percent <= 100", name="ck_quotation_items_discount_percent_range"),
         CheckConstraint("discount_amount >= 0", name="ck_quotation_items_discount_amount_non_negative"),
@@ -141,6 +158,7 @@ class QuotationItem(Base, UUIDMixin, TimestampMixin):
 
     quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), server_default="0.00", nullable=False)
 
     # Line-level commercial snapshots for future pricing/discount engines
     discount_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("0.00"), server_default="0.00", nullable=False)

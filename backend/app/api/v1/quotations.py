@@ -7,9 +7,15 @@ from app.core.database import get_db
 from app.api.deps import get_current_user, require_admin
 from app.models.user import User
 from app.schemas.quotation import QuotationCreate, QuotationUpdate, QuotationResponse
+from app.schemas.quotation_state import QuotationTransitionRequest, QuotationStateHistoryResponse
+from app.schemas.commercial_governance import CommercialGovernanceSummaryResponse
 from app.services import quotations as quotation_service
+from app.services import quotation_state as quotation_state_service
+from app.services import commercial_governance as governance_orchestrator
+
 
 router = APIRouter()
+
 
 
 @router.post(
@@ -102,3 +108,69 @@ async def delete_quotation(
 ) -> None:
     """Deletes a quotation record."""
     await quotation_service.delete_quotation(db, current_user.organization_id, quotation_id)
+
+
+@router.post(
+    "/{quotation_id}/transition",
+    response_model=QuotationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Transition Quotation Status",
+    description="Transitions a quotation to a new state governed by state machine matrix rules."
+)
+async def transition_quotation(
+    quotation_id: uuid.UUID,
+    payload: QuotationTransitionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> QuotationResponse:
+    """Executes state transition for quotation."""
+    return await quotation_state_service.transition_quotation(
+        db,
+        current_user.organization_id,
+        quotation_id,
+        target_status=payload.target_status,
+        reason=payload.reason,
+        current_user_id=current_user.id
+    )
+
+
+@router.get(
+    "/{quotation_id}/history",
+    response_model=List[QuotationStateHistoryResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get Quotation State Transition History",
+    description="Retrieves state transition audit log history for a quotation."
+)
+async def get_quotation_history(
+    quotation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> List[QuotationStateHistoryResponse]:
+    """Gets state history for quotation."""
+    return await quotation_state_service.get_quotation_history(
+        db,
+        current_user.organization_id,
+        quotation_id
+    )
+
+
+@router.get(
+    "/{quotation_id}/governance",
+    response_model=CommercialGovernanceSummaryResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Commercial Governance Telemetry",
+    description="Retrieves integrated Commercial Governance summary (Pricing, Margin, Governance, Risk, Approval) for a quotation."
+)
+async def get_commercial_governance_summary(
+    quotation_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> CommercialGovernanceSummaryResponse:
+    """Gets commercial governance summary for quotation."""
+    return await governance_orchestrator.evaluate_commercial_governance(
+        db,
+        current_user.organization_id,
+        quotation_id,
+        current_user_id=current_user.id,
+        user_role="admin" if current_user.is_admin else "user"
+    )

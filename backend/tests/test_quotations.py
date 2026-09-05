@@ -487,3 +487,90 @@ async def test_quotation_line_item_snapshots_and_commercial_fields(async_client:
     assert Decimal(item["tax_rate"]) == Decimal("5.00")
     assert Decimal(item["tax_amount"]) == Decimal("200.00")
 
+
+@pytest.mark.asyncio
+async def test_quotation_creation_inactive_customer_rejected(async_client: AsyncClient):
+    """Verify creating quotation for an inactive customer is rejected with 422 BusinessRuleViolation."""
+    reg_resp = await async_client.post("/api/v1/auth/register", json={
+        "organization_name": "Inactive Cust Org",
+        "organization_slug": f"inact-c-{uuid.uuid4().hex[:8]}",
+        "email": "admin@inactc.com",
+        "password": "Password123!"
+    })
+    headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    cust_id = (await async_client.post("/api/v1/customers", json={"name": "Active Cust"}, headers=headers)).json()["id"]
+    prod_id = (await async_client.post("/api/v1/products", json={"name": "Prod 1", "sku": "P1", "unit_price": "100.00"}, headers=headers)).json()["id"]
+
+    # Deactivate customer via PUT
+    await async_client.put(f"/api/v1/customers/{cust_id}", json={"is_active": False}, headers=headers)
+
+    # Creation attempt -> 422
+    res = await async_client.post("/api/v1/quotations", json={
+        "customer_id": cust_id,
+        "items": [{"product_id": prod_id, "quantity": "1"}]
+    }, headers=headers)
+    assert res.status_code == 422
+    assert "inactive" in str(res.json()).lower()
+
+
+@pytest.mark.asyncio
+async def test_quotation_creation_inactive_product_rejected(async_client: AsyncClient):
+    """Verify including an inactive product in a new quotation is rejected with 422 BusinessRuleViolation."""
+    reg_resp = await async_client.post("/api/v1/auth/register", json={
+        "organization_name": "Inactive Prod Org",
+        "organization_slug": f"inact-p-{uuid.uuid4().hex[:8]}",
+        "email": "admin@inactp.com",
+        "password": "Password123!"
+    })
+    headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    cust_id = (await async_client.post("/api/v1/customers", json={"name": "Act Cust"}, headers=headers)).json()["id"]
+    prod_id = (await async_client.post("/api/v1/products", json={"name": "Deprecated Service", "sku": "DEP-01", "unit_price": "200.00"}, headers=headers)).json()["id"]
+
+    # Deactivate product via PUT
+    await async_client.put(f"/api/v1/products/{prod_id}", json={"is_active": False}, headers=headers)
+
+    # Creation attempt -> 422
+    res = await async_client.post("/api/v1/quotations", json={
+        "customer_id": cust_id,
+        "items": [{"product_id": prod_id, "quantity": "1"}]
+    }, headers=headers)
+    assert res.status_code == 422
+    assert "inactive" in str(res.json()).lower()
+
+
+@pytest.mark.asyncio
+async def test_quotation_creation_expiration_before_issue_date_rejected(async_client: AsyncClient):
+    """Verify valid_until date earlier than quotation_date is rejected with 422 BusinessRuleViolation."""
+    reg_resp = await async_client.post("/api/v1/auth/register", json={
+        "organization_name": "Date Val Org",
+        "organization_slug": f"date-val-{uuid.uuid4().hex[:8]}",
+        "email": "admin@dateval.com",
+        "password": "Password123!"
+    })
+    headers = {"Authorization": f"Bearer {reg_resp.json()['access_token']}"}
+
+    cust_id = (await async_client.post("/api/v1/customers", json={"name": "Date Cust"}, headers=headers)).json()["id"]
+    prod_id = (await async_client.post("/api/v1/products", json={"name": "Date Prod", "sku": "DP", "unit_price": "100.00"}, headers=headers)).json()["id"]
+
+    # valid_until earlier than quotation_date -> 422
+    res = await async_client.post("/api/v1/quotations", json={
+        "customer_id": cust_id,
+        "quotation_date": "2026-09-10T12:00:00Z",
+        "valid_until": "2026-09-01T12:00:00Z",
+        "items": [{"product_id": prod_id, "quantity": "1"}]
+    }, headers=headers)
+    assert res.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_quotation_creation_unauthenticated_rejected(async_client: AsyncClient):
+    """Verify unauthenticated quotation creation request is rejected with 401 Unauthorized."""
+    res = await async_client.post("/api/v1/quotations", json={
+        "customer_id": str(uuid.uuid4()),
+        "items": [{"product_id": str(uuid.uuid4()), "quantity": "1"}]
+    })
+    assert res.status_code == 401
+
+

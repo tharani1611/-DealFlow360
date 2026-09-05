@@ -14,6 +14,7 @@ class ProductCreate(BaseModel):
     sku: str = Field(..., min_length=1, max_length=100, description="Stock Keeping Unit identifier")
     description: Optional[str] = Field(None, description="Detailed product description")
     unit_price: Decimal = Field(..., ge=Decimal("0.00"), description="Unit price (non-negative monetary decimal)")
+    unit_cost: Decimal = Field(Decimal("0.00"), ge=Decimal("0.00"), description="Unit cost basis (non-negative monetary decimal)")
     currency: str = Field("USD", min_length=3, max_length=3, description="3-letter ISO currency code (e.g. USD, EUR, INR)")
     is_active: bool = Field(True, description="Product availability status flag")
 
@@ -48,6 +49,7 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     unit_price: Optional[Decimal] = Field(None, ge=Decimal("0.00"))
+    unit_cost: Optional[Decimal] = Field(None, ge=Decimal("0.00"))
     currency: Optional[str] = Field(None, min_length=3, max_length=3)
     is_active: Optional[bool] = None
 
@@ -90,6 +92,7 @@ class ProductResponse(BaseModel):
     sku: str
     description: Optional[str] = None
     unit_price: Decimal
+    unit_cost: Decimal = Decimal("0.00")
     currency: str
     is_active: bool
     created_at: datetime

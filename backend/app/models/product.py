@@ -17,6 +17,7 @@ class Product(Base, UUIDMixin, TimestampMixin):
     __table_args__ = (
         UniqueConstraint("organization_id", "sku", name="uq_products_organization_id_sku"),
         CheckConstraint("unit_price >= 0", name="unit_price_non_negative"),
+        CheckConstraint("unit_cost >= 0", name="unit_cost_non_negative"),
         Index("ix_products_organization_id_sku", "organization_id", "sku"),
     )
 
@@ -30,6 +31,7 @@ class Product(Base, UUIDMixin, TimestampMixin):
     sku: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), server_default="0.00", nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
 

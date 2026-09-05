@@ -15,10 +15,11 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   const s = status.toLowerCase();
   let resolvedVariant = variant;
   if (!resolvedVariant) {
-    if (['active', 'accepted', 'won', 'completed', 'good', 'low'].includes(s)) resolvedVariant = 'success';
-    else if (['sent', 'qualified', 'proposal', 'negotiation', 'pending', 'neutral', 'medium'].includes(s)) resolvedVariant = 'warning';
+    if (['active', 'accepted', 'won', 'completed', 'good', 'low', 'converted'].includes(s)) resolvedVariant = 'success';
+    else if (['sent', 'qualified', 'proposal', 'negotiation', 'pending', 'neutral', 'medium', 'expired'].includes(s)) resolvedVariant = 'warning';
     else if (['rejected', 'cancelled', 'lost', 'inactive', 'at_risk', 'high', 'urgent'].includes(s)) resolvedVariant = 'danger';
     else if (['new', 'draft', 'open'].includes(s)) resolvedVariant = 'info';
+    else if (['priced'].includes(s)) resolvedVariant = 'purple';
     else resolvedVariant = 'default';
   }
 

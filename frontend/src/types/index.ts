@@ -161,6 +161,25 @@ export interface QuotationItemCreate {
   sequence?: number;
 }
 
+export type QuotationStatus = 'draft' | 'priced' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'cancelled' | 'converted';
+
+export interface QuotationStateHistoryItem {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  from_status?: string | null;
+  to_status: string;
+  changed_by_user_id?: string | null;
+  changed_by_user_name?: string | null;
+  reason?: string | null;
+  created_at: string;
+}
+
+export interface QuotationTransitionRequest {
+  target_status: QuotationStatus;
+  reason?: string;
+}
+
 export interface Quotation {
   id: string;
   organization_id: string;
@@ -169,7 +188,7 @@ export interface Quotation {
   deal_id?: string | null;
   title?: string | null;
   quotation_number: string;
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'cancelled';
+  status: QuotationStatus;
   currency?: string;
   quotation_date: string;
   valid_until: string | null;
@@ -639,3 +658,275 @@ export interface RevenueForecastResponse {
   deals: DealForecastItem[];
   confidence_factors: ForecastConfidenceFactors;
 }
+
+export interface PricingRule {
+  id: string;
+  organization_id: string;
+  name: string;
+  rule_type: 'contract' | 'customer' | 'volume' | 'promotion';
+  product_id: string;
+  customer_id?: string | null;
+  min_quantity: number | string;
+  max_quantity?: number | string | null;
+  price_type: 'override_price' | 'percentage_discount' | 'fixed_discount';
+  value: number | string;
+  priority: number;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  is_active: boolean;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PricingCalculateRequest {
+  product_id: string;
+  quantity: number | string;
+  customer_id?: string | null;
+  quotation_date?: string;
+  currency?: string;
+  manual_unit_price?: number | string | null;
+}
+
+export interface PricingCalculateResponse {
+  base_price: string;
+  selected_unit_price: string;
+  final_unit_price: string;
+  quantity: string;
+  currency: string;
+  pricing_source: 'BASE_PRODUCT_PRICE' | 'CONTRACT' | 'CUSTOMER' | 'VOLUME' | 'PROMOTION' | 'MANUAL_OVERRIDE';
+  applied_rule_id?: string | null;
+  applied_rule_name?: string | null;
+  discount_amount: string;
+  discount_percent: string;
+  explanation: string;
+}
+
+export type MarginHealthStatus = 'HEALTHY' | 'CAUTION' | 'AT_RISK' | 'NEGATIVE';
+
+export interface LineMarginResponse {
+  product_id: string;
+  product_name: string;
+  quantity: string;
+  unit_selling_price: string;
+  unit_cost: string;
+  line_revenue: string;
+  line_cost: string;
+  gross_margin: string;
+  margin_percent: string;
+  health_status: MarginHealthStatus;
+  pricing_source: string;
+  explanation: string;
+}
+
+export interface QuotationMarginResponse {
+  quotation_id?: string | null;
+  quotation_number?: string | null;
+  customer_id?: string | null;
+  currency: string;
+  total_revenue: string;
+  total_cost: string;
+  gross_margin: string;
+  margin_percent: string;
+  health_status: MarginHealthStatus;
+  items: LineMarginResponse[];
+  explanation: string;
+}
+
+export interface DiscountPolicy {
+  id: string;
+  organization_id: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  priority: number;
+  scope: 'user' | 'customer' | 'product' | 'role' | 'organization';
+  product_id?: string | null;
+  customer_id?: string | null;
+  user_id?: string | null;
+  role?: string | null;
+  max_discount_percent?: string | number | null;
+  max_discount_amount?: string | number | null;
+  minimum_unit_price?: string | number | null;
+  minimum_margin_percent?: string | number | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscountPolicyCreate {
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+  priority?: number;
+  scope?: string;
+  product_id?: string | null;
+  customer_id?: string | null;
+  user_id?: string | null;
+  role?: string | null;
+  max_discount_percent?: number | string | null;
+  max_discount_amount?: number | string | null;
+  minimum_unit_price?: number | string | null;
+  minimum_margin_percent?: number | string | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
+}
+
+export interface GovernanceViolation {
+  rule_id?: string | null;
+  rule_name?: string | null;
+  violation_type: string;
+  message: string;
+  product_id?: string | null;
+  product_name?: string | null;
+  requested_val: string;
+  policy_limit_val: string;
+}
+
+export interface GovernanceEvaluationResult {
+  compliant: boolean;
+  status: 'WITHIN_POLICY' | 'OUTSIDE_POLICY' | 'NO_POLICY';
+  blended_discount_percent: string | number;
+  applied_policies_count: number;
+  violations: GovernanceViolation[];
+  explanation: string;
+}
+
+export interface DiscountRiskFactor {
+  code: string;
+  title: string;
+  description: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  score_impact: number;
+}
+
+export interface RiskEvaluationResult {
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  risk_score: number;
+  blended_discount_percent: string | number;
+  overall_margin_percent: string | number;
+  has_negative_margin: boolean;
+  has_manual_override: boolean;
+  has_policy_violation: boolean;
+  risk_factors: DiscountRiskFactor[];
+  explanation: string;
+}
+
+export interface ApprovalRule {
+  id: string;
+  organization_id: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  priority: number;
+  min_discount_percent?: string | number | null;
+  max_discount_percent?: string | number | null;
+  min_margin_percent?: string | number | null;
+  risk_level?: string | null;
+  quotation_value_threshold?: string | number | null;
+  approval_level: number;
+  required_role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalRuleCreate {
+  name: string;
+  description?: string | null;
+  is_active?: boolean;
+  priority?: number;
+  min_discount_percent?: number | string | null;
+  max_discount_percent?: number | string | null;
+  min_margin_percent?: number | string | null;
+  risk_level?: string | null;
+  quotation_value_threshold?: number | string | null;
+  approval_level?: number;
+  required_role?: string;
+}
+
+export interface QuotationApproval {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  approval_rule_id?: string | null;
+  requested_by_user_id: string;
+  requested_by_user_name?: string | null;
+  approved_by_user_id?: string | null;
+  approved_by_user_name?: string | null;
+  status: 'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'INVALIDATED';
+  approval_level: number;
+  reasons?: string | null;
+  decision_note?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalDecisionRequest {
+  decision: 'APPROVED' | 'REJECTED';
+  note?: string;
+}
+
+export interface CommercialGovernanceSummaryResponse {
+  quotation_id?: string | null;
+  quotation_number?: string | null;
+  customer_id?: string | null;
+  currency: string;
+  total_amount: string;
+  margin: QuotationMarginResponse;
+  governance: GovernanceEvaluationResult;
+  risk: RiskEvaluationResult;
+  approval: QuotationApproval;
+}
+
+export type CopilotIntentType =
+  | 'PIPELINE'
+  | 'DEAL'
+  | 'CUSTOMER'
+  | 'QUOTATION'
+  | 'PRICING'
+  | 'MARGIN'
+  | 'DISCOUNT'
+  | 'APPROVAL'
+  | 'ACTIVITY'
+  | 'GENERAL_SALES';
+
+export interface CopilotEvidenceItem {
+  entity_type: string;
+  entity_id?: string | null;
+  label: string;
+  value: string;
+  detail?: string | null;
+}
+
+export interface CopilotRequest {
+  message: string;
+  deal_id?: string | null;
+  customer_id?: string | null;
+  quotation_id?: string | null;
+}
+
+export interface CopilotResponse {
+  answer: string;
+  intent: CopilotIntentType;
+  evidence: CopilotEvidenceItem[];
+  recommendations: string[];
+  referenced_deal_ids: string[];
+  referenced_customer_ids: string[];
+  referenced_quotation_ids: string[];
+  metadata: AIMetadata;
+}
+
+export interface DealQARequest {
+  question: string;
+}
+
+export interface DealQAResponse {
+  deal_id: string;
+  question: string;
+  answer: string;
+  key_facts: string[];
+  recommended_action?: string | null;
+  metadata: AIMetadata;
+}
+

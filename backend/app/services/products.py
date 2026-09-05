@@ -35,6 +35,7 @@ async def create_product(
         sku=sku,
         description=payload.description.strip() if payload.description else None,
         unit_price=payload.unit_price,
+        unit_cost=payload.unit_cost,
         currency=payload.currency.strip().upper(),
         is_active=payload.is_active
     )
