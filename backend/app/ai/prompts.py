@@ -61,7 +61,26 @@ TASK: Provide an executive 2-3 sentence advisory summary explaining the revenue 
 DO NOT recalculate financial figures or invent numbers. Use the provided metrics as authoritative.
 """
 
+CUSTOMER_HEALTH_EXPLANATION_SYSTEM_PROMPT = f"""
+{SYSTEM_SAFETY_INSTRUCTION}
+
+TASK: Provide a concise 2-3 sentence executive summary explaining the customer's calculated health score, segment, and key positive and negative drivers based ONLY on the provided deterministic customer telemetry.
+"""
+
+PRODUCT_PERFORMANCE_EXPLANATION_SYSTEM_PROMPT = f"""
+{SYSTEM_SAFETY_INSTRUCTION}
+
+TASK: Provide a concise 2-3 sentence advisory explanation of the product's sales performance, margin health, market penetration, and co-purchase affinity patterns based ONLY on the provided product facts.
+"""
+
+PRODUCT_RECOMMENDATION_EXPLANATION_SYSTEM_PROMPT = f"""
+{SYSTEM_SAFETY_INSTRUCTION}
+
+TASK: Provide a clear 1-2 sentence sales recommendation rationale for why a specific cross-sell or upsell product is suggested for a customer based ONLY on the provided evidence data.
+"""
+
 
 def wrap_untrusted_context(context_json_str: str) -> str:
     """Wraps CRM JSON data inside security boundary tags to defend against prompt injection."""
     return f"<UNTRUSTED_CRM_CONTEXT>\n{context_json_str}\n</UNTRUSTED_CRM_CONTEXT>"
+

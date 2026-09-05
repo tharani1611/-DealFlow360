@@ -10,6 +10,7 @@ import logging
 
 from app.models.approval_rule import ApprovalRule
 from app.models.quotation_approval import QuotationApproval
+from app.models.approval_audit_log import ApprovalAuditLog
 from app.models.quotation import Quotation
 from app.models.user import User
 from app.schemas.approval_engine import (
@@ -29,6 +30,60 @@ TWO_DECIMALS = Decimal("0.01")
 def round_decimal(val: Decimal) -> Decimal:
     """Rounds monetary decimal values consistently to two decimal places."""
     return val.quantize(TWO_DECIMALS, rounding=ROUND_HALF_UP)
+
+
+async def create_approval_audit_log(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    quotation_id: uuid.UUID,
+    event_type: str,
+    new_status: str,
+    actor_user_id: Optional[uuid.UUID] = None,
+    actor_name: Optional[str] = None,
+    previous_status: Optional[str] = None,
+    reason: Optional[str] = None,
+    notes: Optional[str] = None,
+    approval_rule_id: Optional[uuid.UUID] = None,
+    approval_level: int = 1,
+    approval_id: Optional[uuid.UUID] = None,
+) -> ApprovalAuditLog:
+    """Appends an immutable audit log record for an approval event."""
+    log_entry = ApprovalAuditLog(
+        organization_id=organization_id,
+        quotation_id=quotation_id,
+        approval_id=approval_id,
+        event_type=event_type,
+        actor_user_id=actor_user_id,
+        actor_name=actor_name,
+        previous_status=previous_status,
+        new_status=new_status,
+        reason=reason,
+        notes=notes,
+        approval_rule_id=approval_rule_id,
+        approval_level=approval_level,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(log_entry)
+    await db.flush()
+    return log_entry
+
+
+async def get_approval_audit_logs(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    quotation_id: uuid.UUID
+) -> List[ApprovalAuditLog]:
+    """Lists append-only approval audit logs for a quotation."""
+    stmt = (
+        select(ApprovalAuditLog)
+        .where(
+            ApprovalAuditLog.organization_id == organization_id,
+            ApprovalAuditLog.quotation_id == quotation_id
+        )
+        .order_by(ApprovalAuditLog.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def create_approval_rule(
@@ -182,7 +237,7 @@ async def evaluate_approval_requirement(
 ) -> QuotationApproval:
     """
     Evaluates whether a quotation requires authorization based on active approval rules.
-    If required, creates or maintains a PENDING QuotationApproval record.
+    If required, creates or maintains a PENDING QuotationApproval record and logs audit events.
     """
     quotation = await quotation_service.get_quotation_by_id(db, organization_id, quotation_id)
 
@@ -237,6 +292,7 @@ async def evaluate_approval_requirement(
 
     reasons_text = "; ".join(trigger_reasons) if trigger_reasons else None
     status = "PENDING" if trigger_reasons else "NOT_REQUIRED"
+    prev_status = existing.status if existing else None
 
     # Reuse existing pending record or create new
     if existing and existing.status in ("PENDING", "INVALIDATED", "NOT_REQUIRED"):
@@ -244,7 +300,7 @@ async def evaluate_approval_requirement(
         existing.approval_rule_id = triggered_rule.id if triggered_rule else None
         existing.reasons = reasons_text
         await db.flush()
-        return existing
+        approval_obj = existing
     else:
         new_approval = QuotationApproval(
             organization_id=organization_id,
@@ -257,7 +313,24 @@ async def evaluate_approval_requirement(
         )
         db.add(new_approval)
         await db.flush()
-        return await get_latest_quotation_approval(db, organization_id, quotation_id)
+        approval_obj = await get_latest_quotation_approval(db, organization_id, quotation_id)
+
+    # Log audit event
+    await create_approval_audit_log(
+        db=db,
+        organization_id=organization_id,
+        quotation_id=quotation_id,
+        approval_id=approval_obj.id if approval_obj else None,
+        event_type="APPROVAL_SUBMITTED" if status == "PENDING" else "APPROVAL_EVALUATED",
+        actor_user_id=requested_by_user_id,
+        previous_status=prev_status,
+        new_status=status,
+        reason=reasons_text,
+        approval_rule_id=triggered_rule.id if triggered_rule else None,
+        approval_level=triggered_rule.approval_level if triggered_rule else 1
+    )
+
+    return approval_obj
 
 
 async def record_approval_decision(
@@ -273,6 +346,10 @@ async def record_approval_decision(
     if not approval or approval.status != "PENDING":
         raise BusinessRuleViolationException("No pending approval request found for this quotation")
 
+    # Segregation of duties rule: non-admin submitter cannot self-approve their own request
+    if approval.requested_by_user_id == current_user.id and not current_user.is_admin:
+        raise ForbiddenException("Segregation of duties violation: The submitter cannot approve their own quotation request.")
+
     # Permission check: current user must be admin or have approver role
     if not current_user.is_admin:
         raise ForbiddenException("Only administrators / authorized commercial approvers can approve quotations")
@@ -281,23 +358,62 @@ async def record_approval_decision(
     if clean_decision not in ("APPROVED", "REJECTED"):
         raise BusinessRuleViolationException("Decision must be either 'APPROVED' or 'REJECTED'")
 
+    prev_status = approval.status
     approval.status = clean_decision
     approval.approved_by_user_id = current_user.id
     approval.decision_note = note.strip() if note else None
 
     await db.flush()
+
+    # Log audit event
+    await create_approval_audit_log(
+        db=db,
+        organization_id=organization_id,
+        quotation_id=quotation_id,
+        approval_id=approval.id,
+        event_type=f"APPROVAL_{clean_decision}",
+        actor_user_id=current_user.id,
+        actor_name=current_user.full_name,
+        previous_status=prev_status,
+        new_status=clean_decision,
+        reason=approval.reasons,
+        notes=approval.decision_note,
+        approval_rule_id=approval.approval_rule_id,
+        approval_level=approval.approval_level
+    )
+
     return await get_latest_quotation_approval(db, organization_id, quotation_id)
 
 
 async def invalidate_quotation_approval(
     db: AsyncSession,
     organization_id: uuid.UUID,
-    quotation_id: uuid.UUID
+    quotation_id: uuid.UUID,
+    actor_user_id: Optional[uuid.UUID] = None,
+    actor_name: Optional[str] = None,
+    reason: str = "Invalidated due to subsequent commercial modification of quotation details."
 ) -> None:
     """Invalidates existing quotation approval if commercial edits occur."""
     approval = await get_latest_quotation_approval(db, organization_id, quotation_id)
     if approval and approval.status in ("APPROVED", "PENDING"):
+        prev_status = approval.status
         approval.status = "INVALIDATED"
-        approval.decision_note = "Invalidated due to subsequent commercial modification of quotation details."
+        approval.decision_note = reason
         await db.flush()
+
+        # Log audit event
+        await create_approval_audit_log(
+            db=db,
+            organization_id=organization_id,
+            quotation_id=quotation_id,
+            approval_id=approval.id,
+            event_type="APPROVAL_INVALIDATED",
+            actor_user_id=actor_user_id,
+            actor_name=actor_name,
+            previous_status=prev_status,
+            new_status="INVALIDATED",
+            reason=reason,
+            approval_rule_id=approval.approval_rule_id,
+            approval_level=approval.approval_level
+        )
         logger.info(f"Quotation {quotation_id} approval invalidated due to commercial edit.")

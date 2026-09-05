@@ -1,5 +1,5 @@
 import { fetchApi } from './apiClient';
-import { RevenueForecastResponse } from '../types';
+import { RevenueForecastResponse, ForecastExplanationResponse } from '../types';
 
 export interface ForecastQueryParams {
   period?: string;
@@ -19,5 +19,9 @@ export const forecastApi = {
     const queryString = query.toString();
     const endpoint = `/intelligence/forecast${queryString ? `?${queryString}` : ''}`;
     return fetchApi<RevenueForecastResponse>(endpoint);
+  },
+
+  async getForecastExplanation(): Promise<ForecastExplanationResponse> {
+    return fetchApi<ForecastExplanationResponse>('/intelligence/forecast/explain');
   },
 };

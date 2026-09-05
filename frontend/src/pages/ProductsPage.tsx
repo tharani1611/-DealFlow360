@@ -8,8 +8,9 @@ import { GlassInput } from '../components/ui/GlassInput';
 import { GlassTextarea } from '../components/ui/GlassTextarea';
 import { GlassModal } from '../components/ui/GlassModal';
 import { LoadingState, ErrorState } from '../components/ui/EmptyState';
+import { ProductIntelligenceModal } from '../components/intelligence/ProductIntelligenceModal';
 import { useToast } from '../context/ToastContext';
-import { Plus } from 'lucide-react';
+import { Plus, BarChart2 } from 'lucide-react';
 
 export const ProductsPage: React.FC = () => {
   const { showToast } = useToast();
@@ -18,8 +19,9 @@ export const ProductsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form State
+  // Form & Intelligence State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedIntelProductId, setSelectedIntelProductId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
@@ -96,6 +98,19 @@ export const ProductsPage: React.FC = () => {
     {
       header: 'Status',
       render: (r) => <StatusBadge status={r.is_active ? 'active' : 'inactive'} size="sm" />,
+    },
+    {
+      header: 'Intelligence',
+      render: (r) => (
+        <BrutalButton
+          variant="secondary"
+          size="sm"
+          icon={BarChart2}
+          onClick={() => setSelectedIntelProductId(r.id)}
+        >
+          Product 360
+        </BrutalButton>
+      ),
     },
   ];
 
@@ -179,6 +194,15 @@ export const ProductsPage: React.FC = () => {
           </div>
         </form>
       </GlassModal>
+
+      {/* Product Intelligence 360 Modal */}
+      {selectedIntelProductId && (
+        <ProductIntelligenceModal
+          isOpen={Boolean(selectedIntelProductId)}
+          onClose={() => setSelectedIntelProductId(null)}
+          productId={selectedIntelProductId}
+        />
+      )}
     </div>
   );
 };

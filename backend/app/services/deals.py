@@ -193,9 +193,24 @@ async def create_deal(
         logger.warning(f"Deal creation failed: {error_msg}")
         if "uq_deals_organization_id_deal_number" in error_msg:
             raise ConflictException("Deal number collision occurred; please retry.")
-        raise BusinessRuleViolationException("Deal creation failed due to a database constraint violation.")
+    created_deal = await get_deal_by_id(db, organization_id, deal.id)
 
-    return await get_deal_by_id(db, organization_id, deal.id)
+    # Evaluate workflow triggers for DEAL_CREATED
+    try:
+        from app.services import automation_engine
+        from app.schemas.automation import EventContext
+        event_ctx = EventContext(
+            organization_id=organization_id,
+            event_type="DEAL_CREATED",
+            entity_type="deal",
+            entity_id=created_deal.id,
+            payload={"deal": {"id": str(created_deal.id), "title": created_deal.title, "value": str(created_deal.value), "stage": created_deal.stage, "probability": created_deal.probability}}
+        )
+        await automation_engine.evaluate_event_triggers(db, organization_id, event_ctx)
+    except Exception:
+        pass
+
+    return created_deal
 
 
 async def list_deals(
@@ -279,6 +294,7 @@ async def update_deal(
 ) -> Deal:
     """Updates an existing deal within tenant scope."""
     deal = await get_deal_by_id(db, organization_id, deal_id)
+    old_stage = deal.stage
     finalized_stages = {"won", "lost"}
 
     update_data = payload.model_dump(exclude_unset=True)
@@ -382,7 +398,26 @@ async def update_deal(
         await db.rollback()
         raise BusinessRuleViolationException("Deal update failed due to a database constraint violation.")
 
-    return await get_deal_by_id(db, organization_id, deal.id)
+    updated_deal = await get_deal_by_id(db, organization_id, deal.id)
+
+    if old_stage != updated_deal.stage:
+        try:
+            from app.services import automation_engine
+            from app.schemas.automation import EventContext
+            event_ctx = EventContext(
+                organization_id=organization_id,
+                event_type="DEAL_STAGE_CHANGED",
+                entity_type="deal",
+                entity_id=updated_deal.id,
+                previous_state={"stage": old_stage},
+                current_state={"stage": updated_deal.stage},
+                payload={"deal": {"id": str(updated_deal.id), "title": updated_deal.title, "value": str(updated_deal.value), "stage": updated_deal.stage, "probability": updated_deal.probability}}
+            )
+            await automation_engine.evaluate_event_triggers(db, organization_id, event_ctx)
+        except Exception:
+            pass
+
+    return updated_deal
 
 
 async def delete_deal(

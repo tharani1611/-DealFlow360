@@ -20,11 +20,16 @@ from app.schemas.intelligence import (
     DashboardIntelligenceResponse,
     AttentionCenterResponse,
     AlertsResponse,
-    ActivityProductivityMetrics
+    ActivityProductivityMetrics,
+    Customer360IntelligenceResponse,
+    Product360IntelligenceResponse,
+    ProductAffinityItem
 )
 from app.schemas.product_recommendation import CustomerProductRecommendationsResponse
-from app.schemas.forecast import RevenueForecastResponse
+from app.schemas.forecast import RevenueForecastResponse, ForecastExplanationResponse
 from app.services import product_recommendations as recommendation_service
+from app.services.customer_intelligence import customer_intelligence_service
+from app.services.product_intelligence import product_intelligence_service
 from app.services import intelligence as intelligence_service
 from app.services import forecast as forecast_service
 from app.ai.service import ai_service
@@ -55,6 +60,32 @@ async def get_revenue_forecast(
         stage=stage,
         forecast_category=forecast_category,
         customer_id=customer_id
+    )
+
+
+@router.get(
+    "/forecast/explain",
+    response_model=ForecastExplanationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get AI Executive Revenue Forecast Explanation",
+    description="Generates AI executive commentary and risk advisory based on deterministic forecast facts."
+)
+async def explain_revenue_forecast(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> ForecastExplanationResponse:
+    """Generates AI executive commentary for revenue forecast."""
+    forecast = await forecast_service.calculate_revenue_forecast(db, current_user.organization_id)
+    summary_text = await ai_service.explain_revenue_forecast(db, current_user.organization_id, forecast)
+    
+    return ForecastExplanationResponse(
+        summary=summary_text,
+        risk_highlights=forecast.confidence_factors.negative_factors,
+        recommendations=[
+            "Focus sales reps on deals marked as AT_RISK with overdue activity items.",
+            "Verify close dates for deals currently missing scheduled target dates.",
+            "Accelerate final negotiation steps for high-probability COMMITTED opportunities."
+        ]
     )
 
 
@@ -265,3 +296,52 @@ async def get_activity_productivity(
 ) -> ActivityProductivityMetrics:
     """Retrieves activity productivity metrics."""
     return await intelligence_service.get_activity_productivity_metrics(db, current_user.organization_id)
+
+
+# Phase 41-45 Endpoints: Customer 360 & Product 360 Intelligence
+
+@router.get(
+    "/customers/{customer_id}/360",
+    response_model=Customer360IntelligenceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Customer 360 Intelligence",
+    description="Calculates comprehensive Customer 360 intelligence, health score, positive/negative drivers, segmentation, and trends."
+)
+async def get_customer_360_intelligence(
+    customer_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Customer360IntelligenceResponse:
+    """Retrieves Customer 360 Intelligence payload with health score, drivers, and trends."""
+    cust_360 = await customer_intelligence_service.get_customer_360_intelligence(
+        db, current_user.organization_id, customer_id
+    )
+    explanation = await ai_service.explain_customer_health(
+        db, current_user.organization_id, cust_360
+    )
+    cust_360.ai_explanation = explanation
+    return cust_360
+
+
+@router.get(
+    "/products/{product_id}/360",
+    response_model=Product360IntelligenceResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get Product 360 Intelligence",
+    description="Calculates Product 360 performance, gross margin, penetration rate, popularity rank, and co-purchase affinities."
+)
+async def get_product_360_intelligence(
+    product_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Product360IntelligenceResponse:
+    """Retrieves Product 360 Intelligence payload with performance KPIs, affinities, and AI advisory."""
+    prod_360 = await product_intelligence_service.get_product_360_intelligence(
+        db, current_user.organization_id, product_id
+    )
+    explanation = await ai_service.explain_product_performance(
+        db, current_user.organization_id, prod_360
+    )
+    prod_360.ai_explanation = explanation
+    return prod_360
+

@@ -17,6 +17,10 @@ import {
   Bell,
   ShieldCheck,
   BarChart3,
+  Workflow,
+  Warehouse,
+  CreditCard,
+  Repeat,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GlassDrawer } from '../components/ui/GlassDrawer';
@@ -56,9 +60,13 @@ export const MainLayout: React.FC = () => {
     { label: 'Products', path: '/products', icon: Package },
     { label: 'Quotations', path: '/quotations', icon: FileText },
     { label: 'Governance', path: '/governance', icon: ShieldCheck },
+    { label: 'Inventory', path: '/inventory', icon: Warehouse },
+    { label: 'Invoices', path: '/invoices', icon: CreditCard },
+    { label: 'Subscriptions', path: '/subscriptions', icon: Repeat },
     { label: 'Deals Pipeline', path: '/deals', icon: TrendingUp },
     { label: 'Forecast', path: '/forecast', icon: BarChart3 },
     { label: 'Activities', path: '/activities', icon: Clock },
+    { label: 'Automations', path: '/automations', icon: Workflow },
     { label: 'AI Intelligence', path: '/ai', icon: Sparkles },
     { label: 'Settings', path: '/settings', icon: Settings },
   ];

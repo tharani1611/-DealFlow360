@@ -13,6 +13,7 @@ from app.schemas.forecast import (
     DealForecastItem,
     PeriodForecast,
     ForecastConfidenceFactors,
+    ForecastScenarios,
     RevenueForecastResponse
 )
 from app.services.intelligence import (
@@ -382,6 +383,14 @@ async def calculate_revenue_forecast(
         elif period == "no_close_date":
             filtered_items = [i for i in filtered_items if i.expected_close_date is None]
 
+    # Calculate Scenarios
+    conservative_val = committed_val
+    base_val = forecast_revenue_val
+    optimistic_val = committed_val + upside_val + sum((Decimal(i.value) for i in open_deal_items if i.forecast_category == "PIPELINE" and i.adjusted_probability >= 30), Decimal("0.00"))
+
+    # Coverage ratio (open pipeline vs forecast revenue)
+    coverage_ratio_val = (open_pipeline_val / forecast_revenue_val) if forecast_revenue_val > Decimal("0.00") else Decimal("0.00")
+
     return RevenueForecastResponse(
         open_pipeline=f"{open_pipeline_val:.2f}",
         weighted_pipeline=f"{weighted_pipeline_val:.2f}",
@@ -391,9 +400,15 @@ async def calculate_revenue_forecast(
         at_risk_revenue=f"{at_risk_val:.2f}",
         won_revenue=f"{won_val:.2f}",
         lost_revenue=f"{lost_val:.2f}",
+        coverage_ratio=f"{coverage_ratio_val:.2f}",
         confidence_score=conf_score,
         confidence_label=conf_label,
         concentration_risk=conc_res.is_concentrated,
+        scenarios=ForecastScenarios(
+            conservative_revenue=f"{conservative_val:.2f}",
+            base_revenue=f"{base_val:.2f}",
+            optimistic_revenue=f"{optimistic_val:.2f}"
+        ),
         periods=periods_list,
         deals=filtered_items,
         confidence_factors=ForecastConfidenceFactors(

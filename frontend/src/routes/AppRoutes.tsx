@@ -18,7 +18,14 @@ import { AIPage } from '../pages/AIPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { ForecastPage } from '../pages/ForecastPage';
 import { CommercialGovernancePage } from '../pages/CommercialGovernancePage';
+import { AutomationsPage } from '../pages/AutomationsPage';
+import { InventoryPage } from '../pages/InventoryPage';
+import { InvoicesPage } from '../pages/InvoicesPage';
+import { SubscriptionsPage } from '../pages/SubscriptionsPage';
 import { LoadingState } from '../components/ui/EmptyState';
+
+import { PortalLoginPage } from '../pages/PortalLoginPage';
+import { PortalQuotationPage } from '../pages/PortalQuotationPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -42,6 +49,11 @@ export const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      
+      {/* Customer Portal Unprotected Routes (Portal Auth managed internally) */}
+      <Route path="/portal/login" element={<PortalLoginPage />} />
+      <Route path="/portal/quotations" element={<PortalQuotationPage />} />
+      <Route path="/portal/quotations/:id" element={<PortalQuotationPage />} />
 
       {/* Protected App Routes */}
       <Route
@@ -65,6 +77,10 @@ export const AppRoutes: React.FC = () => {
         <Route path="activities" element={<ActivitiesPage />} />
         <Route path="forecast" element={<ForecastPage />} />
         <Route path="governance" element={<CommercialGovernancePage />} />
+        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="subscriptions" element={<SubscriptionsPage />} />
+        <Route path="automations" element={<AutomationsPage />} />
         <Route path="ai" element={<AIPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>

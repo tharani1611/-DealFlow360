@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.core.exceptions import UnauthorizedException, ForbiddenException
 from app.models.user import User
+from app.models.portal_user import PortalUser
 
 security_scheme = HTTPBearer(
     auto_error=False,
@@ -31,6 +32,10 @@ async def get_current_user(
     subject_str = payload.get("sub")
     if not subject_str:
         raise UnauthorizedException("Invalid authentication token payload")
+
+    # Reject portal tokens on internal routes
+    if payload.get("type") == "portal":
+        raise UnauthorizedException("Portal token not allowed for internal APIs")
 
     try:
         user_id = uuid.UUID(subject_str)
@@ -55,6 +60,49 @@ async def get_current_user(
         raise UnauthorizedException("User organization is inactive or non-existent")
 
     return user
+
+
+async def get_current_portal_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> PortalUser:
+    """FastAPI dependency resolving the current active authenticated portal user from Bearer token."""
+    if not credentials or not credentials.credentials:
+        raise UnauthorizedException("Portal authentication token missing")
+
+    token = credentials.credentials
+    payload = decode_access_token(token)
+
+    if payload.get("type") != "portal":
+        raise UnauthorizedException("Invalid portal authentication token")
+
+    subject_str = payload.get("sub")
+    if not subject_str:
+        raise UnauthorizedException("Invalid token payload")
+
+    try:
+        portal_user_id = uuid.UUID(subject_str)
+    except (ValueError, TypeError):
+        raise UnauthorizedException("Invalid portal user identifier")
+
+    stmt = (
+        select(PortalUser)
+        .options(
+            selectinload(PortalUser.customer),
+            selectinload(PortalUser.organization)
+        )
+        .where(PortalUser.id == portal_user_id)
+    )
+    res = await db.execute(stmt)
+    portal_user = res.scalar_one_or_none()
+
+    if not portal_user or not portal_user.is_active:
+        raise UnauthorizedException("Portal user account is inactive or non-existent")
+
+    if not portal_user.organization or not portal_user.organization.is_active:
+        raise UnauthorizedException("Portal user organization is inactive")
+
+    return portal_user
 
 
 def is_admin_user(user: User) -> bool:

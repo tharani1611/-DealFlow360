@@ -165,3 +165,119 @@ class ActivityProductivityMetrics(BaseModel):
     upcoming_7d_count: int = 0
     overdue_count: int = 0
     completed_this_week_count: int = 0
+
+
+# Phase 41-45 Additions: Customer + Product Intelligence Subsystem
+
+class CustomerFinancialMetrics(BaseModel):
+    """Deterministic financial metrics for a customer."""
+    total_won_revenue: str = "0.00"
+    open_pipeline: str = "0.00"
+    weighted_pipeline: str = "0.00"
+    quotation_revenue: str = "0.00"
+    gross_margin: str = "0.00"
+    margin_percentage: float = 0.0
+    average_deal_value: str = "0.00"
+
+
+class CustomerSalesMetrics(BaseModel):
+    """Deterministic sales performance metrics for a customer."""
+    deal_count: int = 0
+    won_deal_count: int = 0
+    lost_deal_count: int = 0
+    open_deal_count: int = 0
+    win_rate_percent: float = 0.0
+    average_sales_cycle_days: int = 0
+
+
+class CustomerEngagementDetails(BaseModel):
+    """Deterministic engagement and recency telemetry."""
+    last_activity_date: Optional[datetime] = None
+    days_since_last_activity: int = 999
+    recency_classification: str = Field("INACTIVE", description="VERY_RECENT, RECENT, AGING, STALE, INACTIVE")
+    activities_last_7_days: int = 0
+    activities_last_30_days: int = 0
+    overdue_activities_count: int = 0
+    completed_activities_count: int = 0
+
+
+class CustomerHealthDetail(BaseModel):
+    """Deterministic explainable customer health score and segmentation."""
+    health_score: int = Field(..., ge=0, le=100, description="Health score (0-100)")
+    health_category: str = Field(..., description="HEALTHY, ENGAGED, ATTENTION, AT_RISK, INACTIVE")
+    positive_drivers: List[str] = Field(default_factory=list)
+    negative_drivers: List[str] = Field(default_factory=list)
+    segment: str = Field("DEVELOPING", description="ENTERPRISE, HIGH_VALUE, GROWTH, ACTIVE, DEVELOPING, AT_RISK, INACTIVE")
+    lifecycle_stage: str = Field("NEW", description="NEW, DEVELOPING, ACTIVE, GROWING, MATURE, AT_RISK, INACTIVE")
+    risk_signals: List[str] = Field(default_factory=list)
+
+
+class CustomerTrends(BaseModel):
+    """Trend direction indicators for key customer metrics."""
+    revenue_trend: str = "STABLE"  # UP, DOWN, STABLE, NEW
+    deal_trend: str = "STABLE"
+    activity_trend: str = "STABLE"
+    pipeline_trend: str = "STABLE"
+    engagement_trend: str = "STABLE"
+
+
+class Customer360IntelligenceResponse(BaseModel):
+    """Consolidated Customer 360 Intelligence response payload."""
+    customer_id: uuid.UUID
+    customer_name: str
+    industry: Optional[str] = None
+    financials: CustomerFinancialMetrics
+    sales: CustomerSalesMetrics
+    engagement: CustomerEngagementDetails
+    health: CustomerHealthDetail
+    trends: CustomerTrends
+    purchased_product_ids: List[uuid.UUID] = Field(default_factory=list)
+    ai_explanation: Optional[str] = None
+    metadata: Optional[AIMetadata] = None
+
+
+class ProductPerformanceMetrics(BaseModel):
+    """Deterministic product performance telemetry."""
+    units_quoted: int = 0
+    units_won: int = 0
+    total_revenue: str = "0.00"
+    gross_margin: str = "0.00"
+    margin_percentage: float = 0.0
+    quotation_count: int = 0
+    deal_count: int = 0
+    won_deal_count: int = 0
+    win_rate_percent: float = 0.0
+    average_selling_price: str = "0.00"
+    customer_count: int = 0
+    penetration_rate_percent: float = 0.0
+    popularity_score: int = 0
+    popularity_rank: int = 0
+
+
+class ProductAffinityItem(BaseModel):
+    """Observed co-purchase product affinity relationship."""
+    target_product_id: uuid.UUID
+    target_product_name: str
+    target_sku: str
+    unit_price: str
+    co_purchase_count: int = 0
+    attachment_rate_percent: float = 0.0
+    affinity_score: int = 0
+    relationship_type: str = "CROSS_SELL"  # CROSS_SELL, UPSELL, COMPLEMENTARY
+
+
+class Product360IntelligenceResponse(BaseModel):
+    """Consolidated Product 360 Intelligence response payload."""
+    product_id: uuid.UUID
+    name: str
+    sku: str
+    unit_price: str
+    unit_cost: str
+    is_active: bool
+    description: Optional[str] = None
+    performance: ProductPerformanceMetrics
+    affinities: List[ProductAffinityItem] = Field(default_factory=list)
+    top_customer_segments: List[str] = Field(default_factory=list)
+    ai_explanation: Optional[str] = None
+    metadata: Optional[AIMetadata] = None
+

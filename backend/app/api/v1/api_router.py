@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from app.api.v1 import (
-    health, auth, customers, contacts, products, quotations, deals, activities, ai, intelligence, product_recommendation_rules, pricing, margins, discount_governance, discount_risk, approvals, copilot
+    health, auth, customers, contacts, products, quotations, deals, activities, ai, intelligence, product_recommendation_rules, pricing, margins, discount_governance, discount_risk, approvals, copilot, automations, portal_auth, portal_quotations, negotiation, inventory, fulfillment, shipments, backorders, delivery, billing, invoices, payments, subscriptions, credit_notes
 )
 
 api_router = APIRouter()
@@ -27,21 +27,36 @@ api_router.include_router(discount_governance.router, prefix="/discount-governan
 api_router.include_router(discount_risk.router, prefix="/discount-risk", tags=["Discount Risk Engine"])
 api_router.include_router(approvals.router, prefix="/approvals", tags=["Approval Engine"])
 api_router.include_router(copilot.router, prefix="/copilot", tags=["AI Sales Copilot"])
+api_router.include_router(automations.router, prefix="/automations", tags=["Automation & Workflows"])
+
+# Register Inventory & Fulfillment Subsystem Routers (Phases 36-45)
+api_router.include_router(inventory.router, prefix="/inventory", tags=["Inventory Management"])
+api_router.include_router(fulfillment.router, prefix="/fulfillment", tags=["Fulfillment Engine"])
+api_router.include_router(shipments.router, prefix="/shipments", tags=["Shipments"])
+api_router.include_router(backorders.router, prefix="/backorders", tags=["Backorders"])
+api_router.include_router(delivery.router, prefix="/delivery", tags=["Delivery Promise Tracking"])
+api_router.include_router(billing.router, prefix="/billing", tags=["Hybrid Billing"])
+
+# Register Invoice, Payment & Subscription Lifecycle Routers (Phases 46-52)
+api_router.include_router(invoices.router, prefix="/invoices", tags=["Invoice Engine"])
+api_router.include_router(payments.router, prefix="/payments", tags=["Payment Operations"])
+api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["Subscription Lifecycle"])
+api_router.include_router(credit_notes.router, prefix="/credit-notes", tags=["Credit Notes & Refunds"])
+
+# Register Portal & Negotiation routers
+api_router.include_router(portal_auth.router)
+api_router.include_router(portal_quotations.router)
+api_router.include_router(negotiation.router)
 
 # Module route prefixes specified in architecture
 MODULE_PREFIXES = [
     ("users", "User Management"),
-    ("portal", "Customer Negotiation Portal"),
-    ("fulfillment", "Fulfillment Engine"),
-    ("backorders", "Backorder Queue"),
-    ("billing", "Hybrid Billing"),
-    ("payments", "Payment Operations"),
     ("deal-health", "Deal Health Telemetry"),
     ("reports", "Reporting & Analytics"),
     ("admin", "System Administration")
 ]
 
-# Register placeholder routers for all domain endpoints (returns 501 Not Implemented until domain phase)
+# Register placeholder routers for remaining domain endpoints
 for prefix, tag in MODULE_PREFIXES:
     module_router = APIRouter(prefix=f"/{prefix}", tags=[tag])
 

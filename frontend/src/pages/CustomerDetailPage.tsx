@@ -16,6 +16,7 @@ import {
   Activity,
   CustomerSummaryResponse,
   CustomerEngagementResponse,
+  Customer360Intelligence,
   SalesBriefingResponse,
   ProductRecommendationItem,
   RevenueForecastResponse
@@ -27,6 +28,7 @@ import { BrutalButton } from '../components/ui/BrutalButton';
 import { AIInsightCard } from '../components/ui/AIInsightCard';
 import { SalesBriefingDrawer } from '../components/intelligence/SalesBriefingDrawer';
 import { ProductOpportunityCard } from '../components/intelligence/ProductOpportunityCard';
+import { CustomerHealthCard } from '../components/intelligence/CustomerHealthCard';
 import { Timeline } from '../components/ui/Timeline';
 import { DataTable, Column } from '../components/ui/DataTable';
 import { LoadingState, ErrorState } from '../components/ui/EmptyState';
@@ -45,6 +47,7 @@ export const CustomerDetailPage: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [aiSummary, setAiSummary] = useState<CustomerSummaryResponse | null>(null);
   const [engagement, setEngagement] = useState<CustomerEngagementResponse | null>(null);
+  const [cust360, setCust360] = useState<Customer360Intelligence | null>(null);
   const [briefing, setBriefing] = useState<SalesBriefingResponse | null>(null);
   const [recommendations, setRecommendations] = useState<ProductRecommendationItem[]>([]);
   const [custForecast, setCustForecast] = useState<RevenueForecastResponse | null>(null);
@@ -61,13 +64,14 @@ export const CustomerDetailPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [custData, contactsData, quotesData, dealsData, actData, engData, recData, fcData] = await Promise.all([
+      const [custData, contactsData, quotesData, dealsData, actData, engData, c360Data, recData, fcData] = await Promise.all([
         customerApi.getCustomer(id),
         contactApi.getContacts({ customer_id: id }),
         quotationApi.getQuotations({ customer_id: id }),
         dealApi.getDeals({ customer_id: id }),
         activityApi.getCustomerActivities(id),
         intelligenceApi.getCustomerEngagement(id).catch(() => null),
+        intelligenceApi.getCustomer360(id).catch(() => null),
         intelligenceApi.getCustomerProductRecommendations(id).catch(() => null),
         forecastApi.getForecast({ customer_id: id }).catch(() => null),
       ]);
@@ -77,6 +81,7 @@ export const CustomerDetailPage: React.FC = () => {
       setDeals(dealsData);
       setActivities(actData);
       setEngagement(engData);
+      setCust360(c360Data);
       setRecommendations(recData?.recommendations || []);
       setCustForecast(fcData);
     } catch (err: any) {
@@ -240,6 +245,11 @@ export const CustomerDetailPage: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+            {/* Customer Health & Segment Intelligence Card */}
+            {cust360 && (
+              <CustomerHealthCard health={cust360.health} customerName={customer.name} />
+            )}
+
             {/* Relationship Intelligence Header & Executive Snapshot */}
             {engagement && (
               <GlassCard

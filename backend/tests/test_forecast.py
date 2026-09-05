@@ -167,3 +167,46 @@ async def test_unauthenticated_forecast_rejected(async_client: AsyncClient):
     """Verifies unauthenticated GET /api/v1/intelligence/forecast returns 401."""
     res = await async_client.get("/api/v1/intelligence/forecast")
     assert res.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_forecast_scenarios_and_explanation(async_client: AsyncClient):
+    """Verifies scenarios calculation and AI forecast explanation endpoint."""
+    reg = await async_client.post("/api/v1/auth/register", json={
+        "organization_name": "Scenarios Org",
+        "organization_slug": f"scenorg-{uuid.uuid4().hex[:8]}",
+        "email": f"user-{uuid.uuid4().hex[:6]}@scenorg.com",
+        "password": "Password123!",
+        "full_name": "Scenario User"
+    })
+    headers = {"Authorization": f"Bearer {reg.json()['access_token']}"}
+
+    cust_res = await async_client.post("/api/v1/customers", json={"name": "Scenario Customer"}, headers=headers)
+    cust_id = cust_res.json()["id"]
+
+    await async_client.post("/api/v1/deals", json={
+        "customer_id": cust_id,
+        "title": "Deal Alpha",
+        "stage": "proposal",
+        "value": "80000.00",
+        "probability": 75
+    }, headers=headers)
+
+    res = await async_client.get("/api/v1/intelligence/forecast", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+
+    assert "scenarios" in data
+    assert "coverage_ratio" in data
+    assert Decimal(data["scenarios"]["conservative_revenue"]) >= Decimal("0.00")
+    assert Decimal(data["scenarios"]["base_revenue"]) >= Decimal("0.00")
+    assert Decimal(data["scenarios"]["optimistic_revenue"]) >= Decimal("0.00")
+
+    # Test explanation endpoint
+    exp_res = await async_client.get("/api/v1/intelligence/forecast/explain", headers=headers)
+    assert exp_res.status_code == 200
+    exp_data = exp_res.json()
+    assert "summary" in exp_data
+    assert isinstance(exp_data["risk_highlights"], list)
+    assert isinstance(exp_data["recommendations"], list)
+

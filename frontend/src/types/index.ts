@@ -642,6 +642,18 @@ export interface ForecastConfidenceFactors {
   negative_factors: string[];
 }
 
+export interface ForecastScenarios {
+  conservative_revenue: string;
+  base_revenue: string;
+  optimistic_revenue: string;
+}
+
+export interface ForecastExplanationResponse {
+  summary: string;
+  risk_highlights: string[];
+  recommendations: string[];
+}
+
 export interface RevenueForecastResponse {
   open_pipeline: string;
   weighted_pipeline: string;
@@ -651,12 +663,123 @@ export interface RevenueForecastResponse {
   at_risk_revenue: string;
   won_revenue: string;
   lost_revenue: string;
+  coverage_ratio: string;
   confidence_score: number;
   confidence_label: ConfidenceLabel;
   concentration_risk: boolean;
+  scenarios: ForecastScenarios;
   periods: PeriodForecast[];
   deals: DealForecastItem[];
   confidence_factors: ForecastConfidenceFactors;
+  ai_explanation?: string | null;
+}
+
+export type RuleStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+export type ExecutionStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED' | 'SKIPPED' | 'CANCELLED';
+
+export interface AutomationCondition {
+  field: string;
+  operator: string;
+  value?: any;
+}
+
+export interface AutomationConditionGroup {
+  logical_operator: 'AND' | 'OR';
+  conditions: AutomationCondition[];
+  groups?: AutomationConditionGroup[];
+}
+
+export interface AutomationAction {
+  action_type: string;
+  parameters: Record<string, any>;
+}
+
+export interface AutomationRule {
+  id: string;
+  organization_id: string;
+  name: string;
+  description?: string | null;
+  status: RuleStatus;
+  priority: number;
+  trigger_type: string;
+  conditions: AutomationConditionGroup;
+  actions: AutomationAction[];
+  created_by_user_id?: string | null;
+  updated_by_user_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AutomationRuleCreate {
+  name: string;
+  description?: string;
+  trigger_type: string;
+  priority?: number;
+  conditions: AutomationConditionGroup;
+  actions: AutomationAction[];
+}
+
+export interface AutomationRuleUpdate {
+  name?: string;
+  description?: string;
+  trigger_type?: string;
+  priority?: number;
+  status?: RuleStatus;
+  conditions?: AutomationConditionGroup;
+  actions?: AutomationAction[];
+}
+
+export interface AutomationExecutionAction {
+  id: string;
+  execution_id: string;
+  action_type: string;
+  status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  result_payload: Record<string, any>;
+  error_message?: string | null;
+  executed_at: string;
+}
+
+export interface AutomationExecution {
+  id: string;
+  organization_id: string;
+  rule_id: string;
+  rule_name?: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  status: ExecutionStatus;
+  idempotency_key: string;
+  conditions_matched: boolean;
+  actions_total: number;
+  actions_succeeded: number;
+  actions_failed: number;
+  error_message?: string | null;
+  retry_count: number;
+  trigger_context: Record<string, any>;
+  started_at: string;
+  completed_at?: string | null;
+  actions: AutomationExecutionAction[];
+}
+
+export interface AutomationAnalyticsSummary {
+  total_rules: number;
+  active_rules: number;
+  paused_rules: number;
+  draft_rules: number;
+  executions_today: number;
+  successful_executions: number;
+  failed_executions: number;
+  skipped_executions: number;
+  success_rate_percent: number;
+}
+
+export interface AIRuleRecommendation {
+  rule_name: string;
+  description: string;
+  trigger_type: string;
+  reason: string;
+  recommended_conditions: AutomationConditionGroup;
+  recommended_actions: AutomationAction[];
 }
 
 export interface PricingRule {
@@ -917,6 +1040,110 @@ export interface CopilotResponse {
   metadata: AIMetadata;
 }
 
+export interface CustomerFinancialMetrics {
+  total_won_revenue: string;
+  open_pipeline: string;
+  weighted_pipeline: string;
+  quotation_revenue: string;
+  gross_margin: string;
+  margin_percentage: number;
+  average_deal_value: string;
+}
+
+export interface CustomerSalesMetrics {
+  deal_count: number;
+  won_deal_count: number;
+  lost_deal_count: number;
+  open_deal_count: number;
+  win_rate_percent: number;
+  average_sales_cycle_days: number;
+}
+
+export interface CustomerEngagementDetails {
+  last_activity_date?: string | null;
+  days_since_last_activity: number;
+  recency_classification: 'VERY_RECENT' | 'RECENT' | 'AGING' | 'STALE' | 'INACTIVE';
+  activities_last_7_days: number;
+  activities_last_30_days: number;
+  overdue_activities_count: number;
+  completed_activities_count: number;
+}
+
+export interface CustomerHealthDetail {
+  health_score: number;
+  health_category: 'HEALTHY' | 'ENGAGED' | 'ATTENTION' | 'AT_RISK' | 'INACTIVE';
+  positive_drivers: string[];
+  negative_drivers: string[];
+  segment: 'ENTERPRISE' | 'HIGH_VALUE' | 'GROWTH' | 'ACTIVE' | 'DEVELOPING' | 'AT_RISK' | 'INACTIVE';
+  lifecycle_stage: 'NEW' | 'DEVELOPING' | 'ACTIVE' | 'GROWING' | 'MATURE' | 'AT_RISK' | 'INACTIVE';
+  risk_signals: string[];
+}
+
+export interface CustomerTrends {
+  revenue_trend: 'UP' | 'DOWN' | 'STABLE' | 'NEW';
+  deal_trend: 'UP' | 'DOWN' | 'STABLE' | 'NEW';
+  activity_trend: 'UP' | 'DOWN' | 'STABLE' | 'NEW';
+  pipeline_trend: 'UP' | 'DOWN' | 'STABLE' | 'NEW';
+  engagement_trend: 'UP' | 'DOWN' | 'STABLE' | 'NEW';
+}
+
+export interface Customer360Intelligence {
+  customer_id: string;
+  customer_name: string;
+  industry?: string | null;
+  financials: CustomerFinancialMetrics;
+  sales: CustomerSalesMetrics;
+  engagement: CustomerEngagementDetails;
+  health: CustomerHealthDetail;
+  trends: CustomerTrends;
+  purchased_product_ids: string[];
+  ai_explanation?: string | null;
+  metadata?: AIMetadata | null;
+}
+
+export interface ProductPerformanceMetrics {
+  units_quoted: number;
+  units_won: number;
+  total_revenue: string;
+  gross_margin: string;
+  margin_percentage: number;
+  quotation_count: number;
+  deal_count: number;
+  won_deal_count: number;
+  win_rate_percent: number;
+  average_selling_price: string;
+  customer_count: number;
+  penetration_rate_percent: number;
+  popularity_score: number;
+  popularity_rank: number;
+}
+
+export interface ProductAffinityItem {
+  target_product_id: string;
+  target_product_name: string;
+  target_sku: string;
+  unit_price: string;
+  co_purchase_count: number;
+  attachment_rate_percent: number;
+  affinity_score: number;
+  relationship_type: 'CROSS_SELL' | 'UPSELL' | 'COMPLEMENTARY';
+}
+
+export interface Product360Intelligence {
+  product_id: string;
+  name: string;
+  sku: string;
+  unit_price: string;
+  unit_cost: string;
+  is_active: boolean;
+  description?: string | null;
+  performance: ProductPerformanceMetrics;
+  affinities: ProductAffinityItem[];
+  top_customer_segments: string[];
+  ai_explanation?: string | null;
+  metadata?: AIMetadata | null;
+}
+
 export interface DealQARequest {
   question: string;
 }
@@ -929,4 +1156,641 @@ export interface DealQAResponse {
   recommended_action?: string | null;
   metadata: AIMetadata;
 }
+
+// --- Original Phases 26–35 (Approval, Customer Portal, Negotiation) ---
+
+export interface PortalUserResponse {
+  id: string;
+  organization_id: string;
+  customer_id: string;
+  contact_id?: string | null;
+  email: string;
+  full_name: string;
+  is_active: boolean;
+  last_login_at?: string | null;
+}
+
+export interface PortalTokenResponse {
+  access_token: string;
+  token_type: string;
+  portal_user: PortalUserResponse;
+}
+
+export interface PortalQuotationItemResponse {
+  id: string;
+  product_id: string;
+  product_name?: string | null;
+  sku?: string | null;
+  quantity: number | string;
+  unit_price: string;
+  discount_percent: number | string;
+  line_total: string;
+  notes?: string | null;
+}
+
+export interface PortalQuotationDetailResponse {
+  id: string;
+  quotation_number: string;
+  customer_id: string;
+  customer_name?: string | null;
+  status: string;
+  issue_date?: string | null;
+  expiration_date?: string | null;
+  subtotal: string;
+  discount_amount: string;
+  tax_amount: string;
+  total_amount: string;
+  currency: string;
+  notes?: string | null;
+  items: PortalQuotationItemResponse[];
+  created_at: string;
+}
+
+export interface PortalQuotationListItemResponse {
+  id: string;
+  quotation_number: string;
+  status: string;
+  issue_date?: string | null;
+  expiration_date?: string | null;
+  total_amount: string;
+  currency: string;
+  created_at: string;
+}
+
+export interface PortalActionResponse {
+  success: boolean;
+  message: string;
+  quotation_id: string;
+  status: string;
+}
+
+export interface LineComment {
+  id: string;
+  quotation_id: string;
+  quotation_item_id: string;
+  author_type: 'INTERNAL_USER' | 'CUSTOMER_PORTAL';
+  author_user_id?: string | null;
+  author_portal_user_id?: string | null;
+  author_name: string;
+  comment_text: string;
+  is_internal_only: boolean;
+  created_at: string;
+}
+
+export interface LineCommentCreate {
+  quotation_item_id: string;
+  comment_text: string;
+  is_internal_only?: boolean;
+}
+
+export interface ChangeRequest {
+  id: string;
+  quotation_id: string;
+  quotation_item_id?: string | null;
+  requested_by_portal_user_id: string;
+  change_type: string;
+  status: 'OPEN' | 'UNDER_REVIEW' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
+  requested_discount_percent?: number | string | null;
+  requested_quantity?: number | string | null;
+  request_details: string;
+  response_note?: string | null;
+  reviewed_by_user_id?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+}
+
+export interface ChangeRequestCreate {
+  quotation_item_id?: string | null;
+  change_type: 'quantity_change' | 'counter_discount' | 'validity_extension' | 'general_terms';
+  requested_discount_percent?: number;
+  requested_quantity?: number;
+  request_details: string;
+}
+
+export interface ChangeRequestReview {
+  status: 'ACCEPTED' | 'REJECTED';
+  response_note?: string;
+}
+
+export interface CounterDiscountApply {
+  quotation_item_id?: string | null;
+  requested_discount_percent: number;
+  change_reason: string;
+}
+
+export interface QuotationVersion {
+  id: string;
+  quotation_id: string;
+  version_number: number;
+  subtotal: string;
+  discount_amount: string;
+  tax_amount: string;
+  total_amount: string;
+  gross_margin?: string | null;
+  margin_percent?: string | null;
+  change_reason: string;
+  snapshot_payload: Record<string, any>;
+  created_by_user_id?: string | null;
+  created_at: string;
+}
+
+export interface ApprovalAuditLog {
+  id: string;
+  quotation_id: string;
+  approval_id?: string | null;
+  event_type: string;
+  actor_user_id?: string | null;
+  actor_name?: string | null;
+  previous_status?: string | null;
+  new_status: string;
+  reason?: string | null;
+  notes?: string | null;
+  approval_rule_id?: string | null;
+  approval_level: number;
+  created_at: string;
+}
+
+// --- Original Phases 36–45 (Inventory, Fulfillment & Hybrid Billing) ---
+
+export interface Warehouse {
+  id: string;
+  organization_id: string;
+  code: string;
+  name: string;
+  address?: string | null;
+  priority: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WarehouseCreate {
+  code: string;
+  name: string;
+  address?: string | null;
+  priority?: number;
+  is_active?: boolean;
+}
+
+export interface ProductVariant {
+  id: string;
+  organization_id: string;
+  product_id: string;
+  sku: string;
+  name: string;
+  unit_price_override?: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductVariantCreate {
+  product_id: string;
+  sku: string;
+  name: string;
+  unit_price_override?: number | string | null;
+  is_active?: boolean;
+}
+
+export interface StockReceiptRequest {
+  warehouse_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  quantity: number;
+  notes?: string | null;
+}
+
+export interface InventoryStock {
+  id: string;
+  organization_id: string;
+  warehouse_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  location_code?: string | null;
+  on_hand_quantity: number;
+  reserved_quantity: number;
+  available_quantity: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  organization_id: string;
+  warehouse_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  quantity: number;
+  movement_type: 'RECEIPT' | 'RESERVATION' | 'RELEASE' | 'SHIPMENT' | 'ADJUSTMENT';
+  reference_type?: string | null;
+  reference_id?: string | null;
+  actor_id?: string | null;
+  actor_name?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface LineAvailabilityItem {
+  quotation_item_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  product_name: string;
+  requested_quantity: number;
+  on_hand_quantity: number;
+  reserved_quantity: number;
+  available_quantity: number;
+  shortfall_quantity: number;
+  status: 'AVAILABLE' | 'PARTIALLY_AVAILABLE' | 'OUT_OF_STOCK';
+}
+
+export interface QuotationAvailabilitySummary {
+  quotation_id: string;
+  overall_status: 'AVAILABLE' | 'PARTIALLY_AVAILABLE' | 'OUT_OF_STOCK';
+  total_requested: number;
+  total_available: number;
+  total_shortfall: number;
+  line_availabilities: LineAvailabilityItem[];
+}
+
+export interface InventoryReservation {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  quotation_item_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  warehouse_id: string;
+  quantity: number;
+  status: 'ACTIVE' | 'RELEASED' | 'CONSUMED' | 'EXPIRED';
+  expires_at?: string | null;
+  created_at: string;
+}
+
+export interface WarehouseAllocation {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  quotation_item_id: string;
+  warehouse_id: string;
+  allocated_quantity: number;
+  allocation_strategy: 'SINGLE_WAREHOUSE' | 'MINIMAL_SPLIT' | 'MANUAL_OVERRIDE';
+  status: 'ALLOCATED' | 'FULFILLED' | 'CANCELLED';
+  created_at: string;
+}
+
+export interface SmartAllocationSummary {
+  quotation_id: string;
+  is_fully_allocated: boolean;
+  total_requested: number;
+  total_allocated: number;
+  total_shortfall: number;
+  allocations: WarehouseAllocation[];
+}
+
+export interface ManualOverrideRequest {
+  quotation_id: string;
+  quotation_item_id: string;
+  new_warehouse_id: string;
+  allocated_quantity: number;
+  reason: string;
+}
+
+export interface FulfillmentOverrideAudit {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  quotation_item_id?: string | null;
+  actor_id: string;
+  actor_name: string;
+  original_allocation: Record<string, any>;
+  new_allocation: Record<string, any>;
+  reason: string;
+  created_at: string;
+}
+
+export interface ShipmentLine {
+  id: string;
+  organization_id: string;
+  shipment_id: string;
+  quotation_item_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  quantity: number;
+  created_at: string;
+}
+
+export interface Shipment {
+  id: string;
+  organization_id: string;
+  shipment_number: string;
+  quotation_id: string;
+  warehouse_id: string;
+  status: 'DRAFT' | 'PACKED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  carrier?: string | null;
+  tracking_number?: string | null;
+  shipped_at?: string | null;
+  expected_delivery_date?: string | null;
+  actual_delivery_date?: string | null;
+  lines: ShipmentLine[];
+  created_at: string;
+}
+
+export interface ShipmentCreateRequest {
+  quotation_id: string;
+  warehouse_id: string;
+  carrier?: string;
+  tracking_number?: string;
+  expected_delivery_date?: string;
+}
+
+export interface Backorder {
+  id: string;
+  organization_id: string;
+  backorder_number: string;
+  quotation_id: string;
+  quotation_item_id: string;
+  customer_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  requested_quantity: number;
+  fulfilled_quantity: number;
+  remaining_quantity: number;
+  warehouse_id?: string | null;
+  status: 'OPEN' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLED';
+  promised_delivery_date?: string | null;
+  created_at: string;
+}
+
+export interface BackorderConsolidationSummary {
+  customer_id: string;
+  total_open_backorders: number;
+  total_remaining_quantity: number;
+  backorders: Backorder[];
+}
+
+export interface DeliveryPromise {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  shipment_id?: string | null;
+  backorder_id?: string | null;
+  promised_date: string;
+  expected_date: string;
+  actual_date?: string | null;
+  status: 'ON_TIME' | 'AT_RISK' | 'DELAYED' | 'MET' | 'MISSED';
+  slippage_days: number;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface LineBillingClassification {
+  quotation_item_id: string;
+  product_id: string;
+  product_name: string;
+  billing_type: 'ONE_TIME' | 'RECURRING';
+  unit_price: string;
+  quantity: number;
+  line_total: string;
+}
+
+export interface BillingClassification {
+  id: string;
+  organization_id: string;
+  quotation_id: string;
+  commercial_model: 'ONE_TIME' | 'RECURRING' | 'HYBRID';
+  one_time_total: string;
+  recurring_monthly_total: string;
+  billing_frequency: string;
+  line_classifications: LineBillingClassification[];
+  created_at: string;
+}
+
+export interface InvoiceItem {
+  id: string;
+  organization_id: string;
+  invoice_id: string;
+  product_id?: string | null;
+  product_variant_id?: string | null;
+  quotation_item_id?: string | null;
+  description: string;
+  quantity: number;
+  unit_price: string;
+  discount_amount: string;
+  tax_amount: string;
+  line_subtotal: string;
+  line_total: string;
+  billing_type: 'ONE_TIME' | 'RECURRING';
+  created_at: string;
+}
+
+export interface Invoice {
+  id: string;
+  organization_id: string;
+  invoice_number: string;
+  customer_id: string;
+  quotation_id?: string | null;
+  currency: string;
+  invoice_date: string;
+  due_date: string;
+  subtotal: string;
+  discount_total: string;
+  tax_total: string;
+  total: string;
+  amount_paid: string;
+  amount_due: string;
+  status: 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE' | 'VOID';
+  items?: InvoiceItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InvoiceItemCreate {
+  product_id?: string | null;
+  product_variant_id?: string | null;
+  quotation_item_id?: string | null;
+  description: string;
+  quantity: number;
+  unit_price: number | string;
+  discount_amount?: number | string;
+  tax_amount?: number | string;
+  billing_type?: 'ONE_TIME' | 'RECURRING';
+}
+
+export interface InvoiceCreate {
+  customer_id: string;
+  quotation_id?: string | null;
+  currency?: string;
+  invoice_date?: string | null;
+  due_date?: string | null;
+  items: InvoiceItemCreate[];
+}
+
+export interface Payment {
+  id: string;
+  organization_id: string;
+  payment_number: string;
+  invoice_id: string;
+  customer_id: string;
+  payment_method: 'CREDIT_CARD' | 'BANK_TRANSFER' | 'CHECK' | 'ACH' | 'CASH';
+  amount: string;
+  currency: string;
+  payment_date: string;
+  transaction_reference?: string | null;
+  status: 'RECORDED' | 'FAILED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+  notes?: string | null;
+  recorded_by_user_id?: string | null;
+  created_at: string;
+}
+
+export interface PaymentCreate {
+  invoice_id: string;
+  payment_method: 'CREDIT_CARD' | 'BANK_TRANSFER' | 'CHECK' | 'ACH' | 'CASH';
+  amount: number | string;
+  payment_date?: string | null;
+  transaction_reference?: string | null;
+  notes?: string | null;
+}
+
+export interface BillingSchedule {
+  id: string;
+  organization_id: string;
+  subscription_id: string;
+  billing_period_start: string;
+  billing_period_end: string;
+  billing_date: string;
+  amount: string;
+  status: 'SCHEDULED' | 'DUE' | 'INVOICED' | 'PAID' | 'SKIPPED' | 'CANCELLED';
+  invoice_id?: string | null;
+  created_at: string;
+}
+
+export interface Subscription {
+  id: string;
+  organization_id: string;
+  subscription_number: string;
+  customer_id: string;
+  quotation_id?: string | null;
+  quotation_item_id?: string | null;
+  product_id: string;
+  variant_id?: string | null;
+  plan_name: string;
+  quantity: number;
+  unit_price: string;
+  billing_interval: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  start_date: string;
+  next_billing_date: string;
+  end_date?: string | null;
+  status: 'TRIAL' | 'ACTIVE' | 'PAUSED' | 'CANCELLED' | 'EXPIRED';
+  schedules?: BillingSchedule[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubscriptionCreate {
+  customer_id: string;
+  product_id: string;
+  variant_id?: string | null;
+  quotation_id?: string | null;
+  quotation_item_id?: string | null;
+  plan_name: string;
+  quantity: number;
+  unit_price: number | string;
+  billing_interval: 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  start_date?: string | null;
+}
+
+export interface ProrationCalculation {
+  subscription_id: string;
+  new_quantity: number;
+  new_unit_price: string;
+  effective_date: string;
+  billing_period_start: string;
+  billing_period_end: string;
+  total_period_days: number;
+  remaining_days: number;
+  unused_amount: string;
+  new_amount: string;
+  net_prorated_amount: string;
+}
+
+export interface SubscriptionProration {
+  id: string;
+  organization_id: string;
+  subscription_id: string;
+  old_quantity: number;
+  new_quantity: number;
+  old_unit_price: string;
+  new_unit_price: string;
+  billing_period_start: string;
+  billing_period_end: string;
+  effective_date: string;
+  total_period_days: number;
+  remaining_days: number;
+  prorated_amount: string;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface SubscriptionCancellation {
+  id: string;
+  organization_id: string;
+  subscription_id: string;
+  cancellation_type: 'IMMEDIATE' | 'END_OF_PERIOD';
+  reason: string;
+  effective_date: string;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface CreditNoteItem {
+  id: string;
+  organization_id: string;
+  credit_note_id: string;
+  description: string;
+  quantity: number;
+  unit_price: string;
+  amount: string;
+  created_at: string;
+}
+
+export interface CreditNote {
+  id: string;
+  organization_id: string;
+  credit_note_number: string;
+  invoice_id: string;
+  customer_id: string;
+  reason: string;
+  subtotal: string;
+  tax_total: string;
+  total: string;
+  status: 'ISSUED' | 'APPLIED' | 'VOID';
+  items: CreditNoteItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreditNoteCreate {
+  invoice_id: string;
+  reason: string;
+  items: {
+    description: string;
+    quantity: number;
+    unit_price: number | string;
+  }[];
+}
+
+export interface PaymentRefund {
+  id: string;
+  organization_id: string;
+  refund_number: string;
+  payment_id: string;
+  credit_note_id?: string | null;
+  amount: string;
+  reason: string;
+  refund_date: string;
+  status: 'PROCESSED' | 'CANCELLED';
+  created_at: string;
+}
+
+
 

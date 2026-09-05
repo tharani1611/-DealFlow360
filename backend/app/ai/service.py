@@ -322,5 +322,64 @@ class AIService:
 
         return f"Revenue forecast of ${forecast_resp.forecast_revenue} evaluated with {forecast_resp.confidence_label} ({forecast_resp.confidence_score}/100). Committed pipeline stands at ${forecast_resp.committed_revenue} with ${forecast_resp.at_risk_revenue} identified as at risk."
 
+    async def explain_customer_health(
+        self,
+        db: AsyncSession,
+        organization_id: uuid.UUID,
+        cust_360: Any
+    ) -> str:
+        """Generates concise AI executive commentary explaining customer health score and driver factors."""
+        try:
+            provider = self.get_provider()
+            context_data = {
+                "customer_name": cust_360.customer_name,
+                "health_score": cust_360.health.health_score,
+                "health_category": cust_360.health.health_category,
+                "segment": cust_360.health.segment,
+                "lifecycle_stage": cust_360.health.lifecycle_stage,
+                "positive_drivers": cust_360.health.positive_drivers,
+                "negative_drivers": cust_360.health.negative_drivers,
+                "won_revenue": cust_360.financials.total_won_revenue,
+                "open_pipeline": cust_360.financials.open_pipeline
+            }
+            user_prompt = prompts.wrap_untrusted_context(json.dumps(context_data, indent=2))
+            explanation = await provider.generate_content(prompts.CUSTOMER_HEALTH_EXPLANATION_SYSTEM_PROMPT, user_prompt)
+            if explanation:
+                return explanation.strip()
+        except Exception:
+            pass
+
+        return f"Account '{cust_360.customer_name}' evaluates to health score {cust_360.health.health_score}/100 ({cust_360.health.health_category}). Segmented as {cust_360.health.segment} with won revenue of ${cust_360.financials.total_won_revenue} and open pipeline of ${cust_360.financials.open_pipeline}."
+
+    async def explain_product_performance(
+        self,
+        db: AsyncSession,
+        organization_id: uuid.UUID,
+        prod_360: Any
+    ) -> str:
+        """Generates concise AI advisory explanation for product sales performance and margins."""
+        try:
+            provider = self.get_provider()
+            context_data = {
+                "product_name": prod_360.name,
+                "sku": prod_360.sku,
+                "total_revenue": prod_360.performance.total_revenue,
+                "gross_margin": prod_360.performance.gross_margin,
+                "margin_percentage": prod_360.performance.margin_percentage,
+                "units_won": prod_360.performance.units_won,
+                "penetration_rate_percent": prod_360.performance.penetration_rate_percent,
+                "popularity_rank": prod_360.performance.popularity_rank,
+                "affinities": [aff.model_dump(mode="json") for aff in prod_360.affinities]
+            }
+            user_prompt = prompts.wrap_untrusted_context(json.dumps(context_data, indent=2))
+            explanation = await provider.generate_content(prompts.PRODUCT_PERFORMANCE_EXPLANATION_SYSTEM_PROMPT, user_prompt)
+            if explanation:
+                return explanation.strip()
+        except Exception:
+            pass
+
+        return f"Product '{prod_360.name}' generated ${prod_360.performance.total_revenue} in total revenue with a gross margin of {prod_360.performance.margin_percentage}% across {prod_360.performance.units_won} units sold, achieving a {prod_360.performance.penetration_rate_percent}% customer penetration rate."
+
 
 ai_service = AIService()
+

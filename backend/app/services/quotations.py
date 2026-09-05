@@ -239,8 +239,15 @@ async def create_quotation(
 
     # 3. Date validation: valid_until cannot be earlier than quotation_date
     quot_date = payload.quotation_date or datetime.now(timezone.utc)
-    if payload.valid_until and payload.valid_until < quot_date:
-        raise BusinessRuleViolationException("Expiration date (valid_until) cannot be earlier than quotation issuance date")
+    if quot_date.tzinfo is None:
+        quot_date = quot_date.replace(tzinfo=timezone.utc)
+
+    if payload.valid_until:
+        v_dt = payload.valid_until
+        if v_dt.tzinfo is None:
+            v_dt = v_dt.replace(tzinfo=timezone.utc)
+        if v_dt < quot_date:
+            raise BusinessRuleViolationException("Expiration date (valid_until) cannot be earlier than quotation issuance date")
 
     # 4. Line calculations and historical price snapshots
     items, subtotal, total_amount = await calculate_line_items_and_totals(

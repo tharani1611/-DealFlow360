@@ -47,6 +47,20 @@ class ForecastConfidenceFactors(BaseModel):
     negative_factors: List[str] = Field(default_factory=list)
 
 
+class ForecastScenarios(BaseModel):
+    """Scenario modeling projections."""
+    conservative_revenue: str = "0.00"
+    base_revenue: str = "0.00"
+    optimistic_revenue: str = "0.00"
+
+
+class ForecastExplanationResponse(BaseModel):
+    """Executive AI explanation response for revenue forecast."""
+    summary: str
+    risk_highlights: List[str] = Field(default_factory=list)
+    recommendations: List[str] = Field(default_factory=list)
+
+
 class RevenueForecastResponse(BaseModel):
     """Executive Revenue Forecast & Prediction Response."""
     open_pipeline: str = "0.00"
@@ -57,9 +71,13 @@ class RevenueForecastResponse(BaseModel):
     at_risk_revenue: str = "0.00"
     won_revenue: str = "0.00"
     lost_revenue: str = "0.00"
+    coverage_ratio: str = "0.00"
     confidence_score: int = Field(..., ge=0, le=100)
     confidence_label: str = Field(..., description="'HIGH CONFIDENCE', 'MODERATE CONFIDENCE', 'LOW CONFIDENCE', 'VERY LOW CONFIDENCE'")
     concentration_risk: bool = False
+    scenarios: ForecastScenarios = Field(default_factory=ForecastScenarios)
     periods: List[PeriodForecast] = Field(default_factory=list)
     deals: List[DealForecastItem] = Field(default_factory=list)
     confidence_factors: ForecastConfidenceFactors = Field(default_factory=ForecastConfidenceFactors)
+    ai_explanation: Optional[str] = None
+
