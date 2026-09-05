@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+/* Ambient Background Grid Pattern */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+@layer utilities {
+  /* Neo Glass Surface Hierarchy */
+  .neo-glass-card {
+    @apply bg-slate-900/70 backdrop-blur-glass border border-slate-700/60 shadow-neo rounded-xl transition-all duration-200;
+  }
+
+  .neo-glass-panel {
+    @apply bg-slate-900/60 backdrop-blur-glass border border-slate-800 rounded-xl p-5;
+  }
+
+  .neo-glass-button {
+    @apply px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600/60 text-slate-100 font-bold rounded-lg shadow-neo-sm hover:shadow-neo active:translate-x-[1px] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-indigo-500 focus:outline-none;
+  }
+
+  .neo-glass-button-primary {
+    @apply px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-neo border border-indigo-400/40 active:translate-x-[1px] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2 focus:ring-2 focus:ring-indigo-400 focus:outline-none;
+  }
+
+  .neo-glass-button-ai {
+    @apply px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-lg shadow-neo-indigo border border-indigo-300/40 active:translate-x-[1px] active:translate-y-[1px] transition-all duration-150 flex items-center justify-center gap-2 focus:ring-2 focus:ring-purple-400 focus:outline-none;
+  }
+
+  .neo-glass-input {
+    @apply px-3.5 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all font-mono text-xs;
+  }
+
+  .neo-glass-table {
+    @apply w-full text-left border-collapse text-xs;
+  }
+
+  .neo-glass-table th {
+    @apply bg-slate-950/90 text-slate-400 font-extrabold uppercase tracking-wider px-4 py-3.5 border-b border-slate-800 text-[11px] font-mono;
+  }
+
+  .neo-glass-table td {
+    @apply px-4 py-3.5 border-b border-slate-800/60 text-slate-200 font-normal;
+  }
+
+  .neo-glass-table tr:hover td {
+    @apply bg-slate-800/40;
+  }
+}
