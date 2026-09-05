@@ -196,7 +196,7 @@ export const LoginPage: React.FC = () => {
                   className="px-2.5 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-500/40 hover:bg-indigo-900/60 hover:border-indigo-400 text-indigo-200 text-xs font-medium text-left transition-colors flex flex-col"
                 >
                   <span className="font-bold text-indigo-300">📊 Bulk Data Lab</span>
-                  <span className="text-[10px] text-slate-400">8,290+ Records</span>
+                  <span className="text-[10px] text-slate-400">Resized Analytics Lab (~3.5k Records)</span>
                 </button>
 
                 <button

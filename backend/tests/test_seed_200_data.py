@@ -1,8 +1,8 @@
 """
-DealFlow360 — 200 Synthetic Data Seeder Test Suite
-===================================================
+DealFlow360 — 200 Synthetic Data Seeder Test Suite (Delegate)
+============================================================
 Targeted tests verifying:
-1. `seed_200_data()` generates >= 200 (target: ~370) relationally connected business records.
+1. `seed_200_data()` delegates to `bulk_seeder` generating ~3,500 relationally connected business records.
 2. Multi-tenant isolation: demo data (`demo-enterprise`) remains untouched before and after resetting `bulk-data-lab`.
 3. Financial field precision: exact Decimal arithmetic across subtotal, tax, discount, line items, invoices, and payments.
 4. Non-negative inventory levels and stock availability calculations.
@@ -31,25 +31,25 @@ from app.seed.demo_seeder import seed_demo_data
 
 @pytest.mark.asyncio
 async def test_seed_200_data_generates_at_least_200_records():
-    """Verify that seed_200_data generates >= 200 valid connected business records under bulk-data-lab."""
+    """Verify that seed_200_data generates valid connected business records under bulk-data-lab."""
     summary = await seed_200_data()
     total = summary.get("total_records", 0)
 
-    assert total >= 200, f"Expected >= 200 records, got {total}"
-    assert summary.get("customers", 0) == 20
-    assert summary.get("contacts", 0) == 20
-    assert summary.get("products", 0) == 20
-    assert summary.get("product_variants", 0) == 15
-    assert summary.get("warehouses", 0) == 3
-    assert summary.get("inventory_stocks", 0) == 15
-    assert summary.get("deals", 0) == 30
-    assert summary.get("quotations", 0) == 30
-    assert summary.get("quotation_items", 0) >= 45
-    assert summary.get("invoices", 0) == 10
-    assert summary.get("payments", 0) == 8
-    assert summary.get("subscriptions", 0) == 5
-    assert summary.get("billing_schedules", 0) == 15
-    assert summary.get("deal_health_snapshots", 0) == 10
+    assert total >= 2500, f"Expected >= 2500 records, got {total}"
+    assert summary.get("customers", 0) == 120
+    assert summary.get("contacts", 0) >= 150
+    assert summary.get("products", 0) == 120
+    assert summary.get("product_variants", 0) == 240
+    assert summary.get("warehouses", 0) == 10
+    assert summary.get("inventory_stocks", 0) >= 300
+    assert summary.get("deals", 0) == 120
+    assert summary.get("quotations", 0) == 120
+    assert summary.get("quotation_items", 0) >= 300
+    assert summary.get("invoices", 0) >= 40
+    assert summary.get("payments", 0) >= 30
+    assert summary.get("subscriptions", 0) >= 20
+    assert summary.get("billing_schedules", 0) >= 100
+    assert summary.get("deal_health_snapshots", 0) == 120
 
 
 @pytest.mark.asyncio
@@ -119,7 +119,7 @@ async def test_financial_decimal_precision_and_subtotal_math():
         quotes = (await session.execute(
             select(Quotation).where(Quotation.organization_id == bulk_org.id)
         )).scalars().all()
-        assert len(quotes) == 30
+        assert len(quotes) == 120
 
         for q in quotes:
             items = (await session.execute(
@@ -158,7 +158,7 @@ async def test_inventory_stock_non_negative():
         stocks = (await session.execute(
             select(InventoryStock).where(InventoryStock.organization_id == bulk_org.id)
         )).scalars().all()
-        assert len(stocks) == 15
+        assert len(stocks) >= 300
 
         for st in stocks:
             assert st.on_hand_quantity >= 0

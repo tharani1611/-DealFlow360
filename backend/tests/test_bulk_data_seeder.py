@@ -1,8 +1,8 @@
 """
-DealFlow360 — High-Volume Bulk Data Seeder Test Suite
-=====================================================
+DealFlow360 — Resized Bulk Data Seeder Test Suite
+===================================================
 Comprehensive tests verifying:
-1. Bulk seeder generates > 1,000 (target: 8,000+) deterministic records.
+1. Bulk seeder generates ~3,500 deterministic records (~120 for major entities like customers, products, deals, quotations).
 2. Seeder is idempotent and rerunning does not duplicate records.
 3. Reset script purges strictly bulk tenants ('bulk-data-lab', 'bulk-isolation-lab') and preserves 'demo-enterprise'.
 4. Multi-tenant isolation is strictly maintained across DB queries and API models.
@@ -35,19 +35,19 @@ from app.seed.demo_seeder import seed_demo_data
 
 
 @pytest.mark.asyncio
-async def test_bulk_seeder_creates_substantially_more_than_1000_records():
-    """Verify that bulk seeder generates > 1,000 (approx 8,000+) valid business records."""
+async def test_bulk_seeder_creates_resized_dataset():
+    """Verify that bulk seeder generates ~3,500 valid business records (120 major entity counts)."""
     summary = await seed_bulk_data()
     total = summary.get("total_records", 0)
 
-    assert total > 1000, f"Expected > 1000 records, got {total}"
-    assert total >= 8000, f"Expected high-volume dataset >= 8000 records, got {total}"
-    assert summary.get("customers", 0) >= 150
-    assert summary.get("products", 0) >= 100
-    assert summary.get("quotations", 0) >= 300
-    assert summary.get("quotation_items", 0) >= 1000
-    assert summary.get("invoices", 0) >= 100
-    assert summary.get("inventory_stocks", 0) >= 500
+    assert total >= 2500, f"Expected >= 2500 records, got {total}"
+    assert summary.get("customers", 0) == 120
+    assert summary.get("products", 0) == 120
+    assert summary.get("deals", 0) == 120
+    assert summary.get("quotations", 0) == 120
+    assert summary.get("quotation_items", 0) >= 300
+    assert summary.get("invoices", 0) >= 40
+    assert summary.get("inventory_stocks", 0) >= 300
 
 
 @pytest.mark.asyncio
@@ -80,7 +80,7 @@ async def test_reset_bulk_data_preserves_demo_tenant():
         # Verify bulk tenant exists and has data
         bulk_org = (await session.execute(select(Organization).where(Organization.slug == BULK_ORG_SLUG))).scalar_one()
         bulk_cust_count = (await session.execute(select(func.count()).select_from(Customer).where(Customer.organization_id == bulk_org.id))).scalar()
-        assert bulk_cust_count >= 150
+        assert bulk_cust_count == 120
 
     # 3. Reset bulk data only
     await reset_bulk_data()
@@ -135,11 +135,11 @@ async def test_financial_decimal_precision_and_subtotal_consistency():
 
         # Check Quotation calculations
         quotes = (await session.execute(select(Quotation).where(Quotation.organization_id == bulk_org.id))).scalars().all()
-        assert len(quotes) >= 300
+        assert len(quotes) == 120
 
         for q in quotes:
             items = (await session.execute(select(QuotationItem).where(QuotationItem.quotation_id == q.id))).scalars().all()
-            assert len(items) >= 2
+            assert len(items) >= 1
 
             calc_subtotal = Decimal("0.00")
             calc_discount = Decimal("0.00")
@@ -168,7 +168,7 @@ async def test_inventory_non_negative_and_stock_consistency():
         bulk_org = (await session.execute(select(Organization).where(Organization.slug == BULK_ORG_SLUG))).scalar_one()
 
         stocks = (await session.execute(select(InventoryStock).where(InventoryStock.organization_id == bulk_org.id))).scalars().all()
-        assert len(stocks) >= 500
+        assert len(stocks) >= 300
 
         for st in stocks:
             assert st.on_hand_quantity >= 0

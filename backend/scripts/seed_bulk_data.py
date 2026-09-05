@@ -1,11 +1,10 @@
 """
 DealFlow360 — Bulk Data Seeder CLI Script
 ==========================================
-CLI command to seed 1,000+ (target: 8,000+) realistic synthetic records into 'bulk-data-lab'.
+CLI command to seed a realistic, medium-volume bulk dataset (~3,500 records) into 'bulk-data-lab'.
 
 Usage:
     python scripts/seed_bulk_data.py
-    python scripts/seed_bulk_data.py --count 5000
 """
 
 import argparse
@@ -22,20 +21,20 @@ from app.seed.bulk_seeder import seed_bulk_data
 
 async def main():
     parser = argparse.ArgumentParser(description="DealFlow360 Bulk Data Seeder")
-    parser.add_argument("--count", type=int, default=5000, help="Minimum target record count threshold")
+    parser.add_argument("--count", type=int, default=3500, help="Target record count threshold")
     args = parser.parse_args()
 
     print("=" * 80)
-    print("DealFlow360 — High-Volume Bulk Data Seeding System (1,000+ Records)")
+    print("DealFlow360 — Resized Bulk Data Seeding System (~3,500 Records)")
     print("=" * 80)
-    print(f"Target Record Count Threshold : {args.count}")
+    print(f"Target Major Entity Counts    : 120 Customers, 120 Products, 120 Deals, 120 Quotations")
     print("Tenant Target                 : DealFlow360 Analytics Lab (slug: bulk-data-lab)")
     print("Isolation Tenant              : DealFlow360 Isolation Testing Lab (slug: bulk-isolation-lab)")
     print("=" * 80)
 
     start_time = time.time()
     try:
-        res = await seed_bulk_data(target_records=args.count)
+        res = await seed_bulk_data()
         elapsed = time.time() - start_time
 
         print("\n" + "=" * 80)

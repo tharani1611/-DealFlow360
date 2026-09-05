@@ -3,7 +3,7 @@ import asyncpg
 
 async def check():
     try:
-        conn = await asyncpg.connect("postgresql://dealflow_user:dealflow_password@localhost:5432/dealflow360")
+        conn = await asyncpg.connect("postgresql://dealflow_user:DealFlow123!@localhost:5432/dealflow360")
         version = await conn.fetchval("SELECT version()")
         tables = await conn.fetch("""
             SELECT relname AS table_name, n_live_tup AS row_count

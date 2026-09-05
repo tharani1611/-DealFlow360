@@ -1,42 +1,42 @@
 """
-DealFlow360 - High-Volume Bulk Data Seeder & Analytics Dataset (1000+ Records)
-=============================================================================
+DealFlow360 — Resized Medium-Volume Bulk Data Seeder & Analytics Dataset (~3,500 Records)
+======================================================================================
 This module generates a rich, realistic, interconnected, and deterministic dataset
-containing well over 1,000 (target: ~8,000–10,000) records for the dedicated tenant:
+containing approximately 100–200 records for major business entities (customers: 120,
+products: 120, deals: 120, quotations: 120) under the dedicated tenant:
 'DealFlow360 Analytics Lab' (`bulk-data-lab`).
 
 It exercises the complete commercial lifecycle:
 - 2 Tenants (Primary Analytics Lab + Secondary Isolation Testing Lab)
-- 20 Persona & Staff Users + 25 Portal Users
-- 200 Unique B2B Customers across Indian metropolitan hubs
-- 300+ Customer Contacts
+- 20 Persona & Staff Users + 20 Portal Users
+- 120 B2B Customers & ~180 Customer Contacts
 - 120 Products (Office Furniture, Equipment, Hospitality, Software, Services, Components)
-- 180+ Product Variants
+- 240 Product Variants
 - 10 Regional Warehouses
-- 120+ Pricing Rules (Contract, Volume, Tiered, Promotional)
-- 60+ Discount Governance Policies
-- 80+ Product Upsell/Cross-sell Recommendation Rules
-- 20 Multi-tier Approval Rules
-- 350+ Sales Deals
-- 350+ Quotations with 1,400+ Line Items (Exact Decimal precision calculations)
-- 800+ Quotation State History Audit Logs
-- 150+ Quotation Approval Requests & 200+ Approval Audit Logs
-- 200+ Negotiation Comments & 120+ Counter-Discount Change Requests
-- 150+ Quotation Snapshot Versions
-- 400+ Warehouse Item Allocations & 350+ Commercial Billing Classifications
-- 600+ Multi-Warehouse Stock Distributions & 800+ Stock Movements
-- 300+ Stock Reservations
-- 200+ Physical Shipments & 400+ Shipment Line Items
-- 80+ Backorder Shortfall Records & 200+ Delivery Promise SLA Trackers
-- 250+ Invoices & 800+ Invoice Line Items
-- 250+ Completed Payments
-- 60+ Credit Notes, 80+ Items, and 50+ Payment Cash Refunds
-- 80+ Recurring Subscriptions & 300+ Billing Schedules
-- 50+ Mid-cycle Subscription Prorations & 30+ Cancellation Audits
-- 250+ Deal Health Historical Snapshots & 150+ Anomaly Monitoring Events
-- 120+ Nudges & 150+ Nudge Transition Histories
-- 400+ CRM Activities
-- 20 Automation Workflow Rules & 150+ Executions & 250+ Action Logs
+- 100 Pricing Rules (Contract, Volume, Tiered, Promotional)
+- 60 Discount Governance Policies
+- 80 Product Upsell/Cross-sell Recommendation Rules
+- 4 Multi-tier Approval Rules
+- 120 Sales Deals
+- 120 Quotations with ~360 Line Items (Exact Decimal precision calculations)
+- 120 Quotation State History Audit Logs
+- ~35 Quotation Approval Requests & Audit Logs
+- ~40 Negotiation Comments & ~40 Counter-Discount Change Requests
+- 120 Quotation Snapshot Versions
+- ~125 Warehouse Item Allocations & 120 Commercial Billing Classifications
+- ~360 Multi-Warehouse Stock Distributions & ~360 Stock Movements
+- ~125 Stock Reservations
+- ~50 Physical Shipments & ~125 Shipment Line Items
+- ~10 Backorder Shortfall Records & ~50 Delivery Promise SLA Trackers
+- ~50 Invoices & ~125 Invoice Line Items
+- ~40 Completed Payments
+- ~5 Credit Notes & Items, ~5 Payment Cash Refunds
+- ~30 Recurring Subscriptions & ~120 Billing Schedules
+- ~6 Subscription Cancellation Audits
+- 120 Deal Health Historical Snapshots & ~35 Anomaly Monitoring Events
+- ~35 Nudges & Transition Histories
+- 120 CRM Activities
+- 5 Automation Workflow Rules & 80 Executions & 80 Action Logs
 """
 
 import asyncio
@@ -107,13 +107,29 @@ BULK_ISOLATION_NAME = "DealFlow360 Isolation Testing Lab"
 
 TARGET_BULK_SLUGS = [BULK_ORG_SLUG, BULK_ISOLATION_SLUG]
 
+DEFAULT_BULK_CONFIG: Dict[str, Any] = {
+    "customers": 120,
+    "products": 120,
+    "deals": 120,
+    "quotations": 120,
+    "portal_users": 20,
+    "pricing_rules": 100,
+    "discount_policies": 60,
+    "recommendation_rules": 80,
+    "activities": 120,
+    "automation_executions": 80,
+}
+
 
 def _d(val: Any) -> Decimal:
     """Helper to convert to 2-decimal rounded Decimal."""
     return Decimal(str(val)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-async def reset_bulk_data(session: Optional[AsyncSession] = None) -> Dict[str, Any]:
+async def reset_bulk_data(
+    session: Optional[AsyncSession] = None,
+    target_slugs: Optional[List[str]] = None
+) -> Dict[str, Any]:
     """
     Safely and idempotently wipes all records belonging strictly to bulk dataset tenants:
     - 'bulk-data-lab'
@@ -125,8 +141,10 @@ async def reset_bulk_data(session: Optional[AsyncSession] = None) -> Dict[str, A
         session = AsyncSessionLocal()
         should_close = True
 
+    slugs_to_purge = target_slugs or TARGET_BULK_SLUGS
+
     try:
-        stmt = select(Organization.id).where(Organization.slug.in_(TARGET_BULK_SLUGS))
+        stmt = select(Organization.id).where(Organization.slug.in_(slugs_to_purge))
         res = await session.execute(stmt)
         org_ids = list(res.scalars().all())
 
@@ -240,15 +258,24 @@ async def reset_bulk_data(session: Optional[AsyncSession] = None) -> Dict[str, A
             await session.close()
 
 
-async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records: int = 5000) -> Dict[str, Any]:
+async def seed_bulk_data(
+    session: Optional[AsyncSession] = None,
+    config: Optional[Dict[str, Any]] = None,
+    target_records: Optional[int] = None,
+) -> Dict[str, Any]:
     """
-    Generates deterministic bulk data (8,000+ records) under the 'bulk-data-lab' tenant.
+    Generates deterministic bulk data (~3,500 records total; 120 for major entities like
+    customers, products, deals, quotations) under the 'bulk-data-lab' tenant.
     Idempotent: resets existing bulk tenant first before re-seeding.
     """
     should_close = False
     if session is None:
         session = AsyncSessionLocal()
         should_close = True
+
+    cfg = DEFAULT_BULK_CONFIG.copy()
+    if config:
+        cfg.update(config)
 
     # Seed random generator deterministically
     rnd = random.Random(42)
@@ -367,7 +394,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         await session.flush()
 
         # =========================================================================
-        # 4. CUSTOMERS & CONTACTS (200 B2B Customers, 300+ Contacts)
+        # 4. CUSTOMERS & CONTACTS (Configurable: ~120 Customers, ~180 Contacts)
         # =========================================================================
         cities_data = [
             ("Mumbai", "Maharashtra", "400001", "India"),
@@ -390,6 +417,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         customers: List[Customer] = []
         contacts: List[Contact] = []
         cust_idx = 1
+        cust_limit = cfg.get("customers", 120)
 
         for pfx in prefixes:
             for sct in sectors:
@@ -434,9 +462,9 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
                     contacts.append(cnt)
 
                 cust_idx += 1
-                if len(customers) >= 200:
+                if len(customers) >= cust_limit:
                     break
-            if len(customers) >= 200:
+            if len(customers) >= cust_limit:
                 break
 
         session.add_all(customers)
@@ -444,10 +472,11 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         await session.flush()
 
         # =========================================================================
-        # 5. PORTAL USERS (25 Customer Portal Users)
+        # 5. PORTAL USERS (Configurable: 20 Customer Portal Users)
         # =========================================================================
+        portal_user_count = min(cfg.get("portal_users", 20), len(customers))
         portal_users: List[PortalUser] = []
-        for i in range(25):
+        for i in range(portal_user_count):
             c_target = customers[i]
             c_contact = [cnt for cnt in contacts if cnt.customer_id == c_target.id][0]
             pu = PortalUser(
@@ -466,12 +495,12 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         await session.flush()
 
         # =========================================================================
-        # 6. PRODUCTS & PRODUCT VARIANTS (120 Products, 180+ Variants)
+        # 6. PRODUCTS & PRODUCT VARIANTS (Configurable: ~120 Products, ~240 Variants)
         # =========================================================================
         categories_products = [
             # Office Furniture
-            ("Executive Ergonomic Mesh Chair", "DF-FUR-CHR", Decimal("18500.00"), Decimal("11000.00"), ["Black Mesh", "Grey Mesh", "Headrest + Lumbar"]),
-            ("Dual-Motor Height Adjustable Standing Desk (150x75cm)", "DF-FUR-DSK", Decimal("34000.00"), Decimal("21000.00"), ["Walnut Top", "Oak Top", "Matte White"]),
+            ("Executive Ergonomic Mesh Chair", "DF-FUR-CHR", Decimal("18500.00"), Decimal("11000.00"), ["Black Mesh", "Grey Mesh"]),
+            ("Dual-Motor Height Adjustable Standing Desk (150x75cm)", "DF-FUR-DSK", Decimal("34000.00"), Decimal("21000.00"), ["Walnut Top", "Oak Top"]),
             ("Conference Pod 4-Seater Soundproof Booth", "DF-FUR-POD", Decimal("285000.00"), Decimal("175000.00"), ["Standard Glass", "Frosted Acoustic Glass"]),
             ("Modular Collaborative L-Shaped Workstation", "DF-FUR-WSK", Decimal("52000.00"), Decimal("31000.00"), ["2-Person Pod", "4-Person Cluster"]),
             ("Heavy-Duty Steel Lateral Filing Cabinet", "DF-FUR-CAB", Decimal("14500.00"), Decimal("8500.00"), ["3-Drawer White", "4-Drawer Charcoal"]),
@@ -504,7 +533,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
             ("Commercial Facility Ergonomic Audit & Layout Design", "DF-SRV-AUD", Decimal("35000.00"), Decimal("10000.00"), ["Floorplan 5000 sqft", "Floorplan 20000 sqft"]),
             ("Turnkey White-Glove On-site Delivery & Installation", "DF-SRV-INS", Decimal("18000.00"), Decimal("6000.00"), ["Metro Standard", "Express Weekend"]),
 
-            # Raw Material & Assembly Components (Manufacturing BOM Scenarios)
+            # Raw Material & Assembly Components
             ("Cold-Rolled Steel Desk Leg Framework Set", "DF-RAW-STL", Decimal("6500.00"), Decimal("4200.00"), ["Black Powder-Coat", "White Powder-Coat"]),
             ("Industrial Dual Electric Synchronized Motor Cylinder", "DF-RAW-MTR", Decimal("8200.00"), Decimal("5500.00"), ["3-Stage Heavy Duty", "2-Stage Standard"]),
             ("Pre-Drilled European Solid Birch Veneer Desktop (160x80cm)", "DF-RAW-TOP", Decimal("7800.00"), Decimal("4800.00"), ["Birch Natural", "Smoked Oak"]),
@@ -512,12 +541,12 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
             ("Class-4 Heavy Gas-Lift Pneumatic Cylinder 120mm", "DF-RAW-GAS", Decimal("1500.00"), Decimal("850.00"), ["Standard Travel", "High-Stool Travel"]),
         ]
 
-        # Generate 120 distinct products by repeating templates with sequence numbers
         products: List[Product] = []
         product_variants: List[ProductVariant] = []
+        prod_limit = cfg.get("products", 120)
 
         p_counter = 1
-        while len(products) < 120:
+        while len(products) < prod_limit:
             for base_name, sku_prefix, price, cost, var_names in categories_products:
                 p_sku = f"{sku_prefix}-{p_counter:04d}"
                 prod = Product(
@@ -550,7 +579,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
                     product_variants.append(var)
 
                 p_counter += 1
-                if len(products) >= 120:
+                if len(products) >= prod_limit:
                     break
 
         session.add_all(products)
@@ -559,16 +588,15 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         await session.flush()
 
         # =========================================================================
-        # 7. INVENTORY STOCKS & MOVEMENTS (600+ Stock Records Across 10 Warehouses)
+        # 7. INVENTORY STOCKS & MOVEMENTS (~360 Stock Locations Across Warehouses)
         # =========================================================================
         inventory_stocks: List[InventoryStock] = []
         inventory_movements: List[InventoryMovement] = []
 
         for p_idx, prod in enumerate(products):
-            # Select 3-6 warehouses for each product
-            assigned_whs = rnd.sample(warehouses, rnd.randint(3, 7))
+            # Select 3-4 warehouses for each product
+            assigned_whs = rnd.sample(warehouses, rnd.randint(3, 4))
             for wh in assigned_whs:
-                # Stock distribution types
                 stock_scenario = rnd.choice(["HEALTHY", "HEALTHY", "HEALTHY", "LOW", "ZERO", "RESERVED"])
                 if stock_scenario == "HEALTHY":
                     on_hand = rnd.randint(50, 400)
@@ -598,7 +626,6 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
                 )
                 inventory_stocks.append(stk)
 
-                # Add initial receipt movement audit record
                 if on_hand > 0:
                     mvt = InventoryMovement(
                         id=uuid.uuid4(),
@@ -623,8 +650,9 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         # =========================================================================
         # 8. PRICING RULES, DISCOUNT POLICIES & RECOMMENDATION RULES
         # =========================================================================
+        pricing_rule_count = cfg.get("pricing_rules", 100)
         pricing_rules: List[PricingRule] = []
-        for i in range(120):
+        for i in range(pricing_rule_count):
             p = products[i % len(products)]
             c = customers[i % len(customers)] if i % 3 == 0 else None
             r_type = rnd.choice(["volume", "volume", "contract", "promotion"])
@@ -655,8 +683,9 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
             pricing_rules.append(p_rule)
         session.add_all(pricing_rules)
 
+        discount_policy_count = cfg.get("discount_policies", 60)
         discount_policies: List[DiscountPolicy] = []
-        for i in range(60):
+        for i in range(discount_policy_count):
             p = products[i % len(products)] if i % 2 == 0 else None
             c = customers[i % len(customers)] if i % 3 == 0 else None
             dp = DiscountPolicy(
@@ -676,8 +705,9 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
             discount_policies.append(dp)
         session.add_all(discount_policies)
 
+        rec_rule_count = cfg.get("recommendation_rules", 80)
         rec_rules: List[ProductRecommendationRule] = []
-        for i in range(80):
+        for i in range(rec_rule_count):
             src_p = products[i % len(products)]
             tgt_p = products[(i + 7) % len(products)]
             if src_p.id != tgt_p.id:
@@ -722,7 +752,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         await session.flush()
 
         # =========================================================================
-        # 9. DEALS & QUOTATIONS & WORKFLOWS (350+ Deals, 350+ Quotations, 1400+ Items)
+        # 9. DEALS & QUOTATIONS & WORKFLOWS (120 Deals, 120 Quotations, ~360 Items)
         # =========================================================================
         deals: List[Deal] = []
         quotations: List[Quotation] = []
@@ -761,20 +791,21 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         activities: List[Activity] = []
 
         q_status_weights = [
-            ("draft", 35),
-            ("priced", 50),
-            ("sent", 70),
-            ("accepted", 90),
-            ("rejected", 35),
-            ("expired", 35),
-            ("cancelled", 15),
-            ("converted", 20),
+            ("draft", 12),
+            ("priced", 18),
+            ("sent", 24),
+            ("accepted", 32),
+            ("rejected", 12),
+            ("expired", 10),
+            ("cancelled", 4),
+            ("converted", 8),
         ]
         status_pool: List[str] = []
         for st, count in q_status_weights:
             status_pool.extend([st] * count)
 
-        for q_idx in range(1, 351):
+        quote_limit = min(cfg.get("quotations", 120), cfg.get("deals", 120))
+        for q_idx in range(1, quote_limit + 1):
             cust = customers[(q_idx - 1) % len(customers)]
             cust_contacts = [cnt for cnt in contacts if cnt.customer_id == cust.id]
             contact = cust_contacts[0] if cust_contacts else None
@@ -841,10 +872,9 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
                 total_amount=Decimal("0.00")
             )
             quotations.append(quote)
-            # Link deal after flush
 
-            # Add 2 to 5 Line Items
-            item_count = rnd.randint(2, 5)
+            # Add 2 to 4 Line Items
+            item_count = rnd.randint(2, 4)
             q_subtotal = Decimal("0.00")
             q_discount = Decimal("0.00")
             q_tax = Decimal("0.00")
@@ -859,7 +889,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
                 disc_pct = Decimal(str(rnd.choice([0, 5, 10, 15, 20, 25])))
                 line_sub = (qty * u_price).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 line_disc = (line_sub * disc_pct / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-                tax_rate = Decimal("18.00")  # standard GST/VAT
+                tax_rate = Decimal("18.00")
                 taxable = line_sub - line_disc
                 line_tax = (taxable * tax_rate / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                 line_tot = taxable + line_tax
@@ -938,7 +968,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
             )
             billing_classifications.append(bc)
 
-            # Approvals for High Discount Quotations (>15%)
+            # Approvals for High Discount Quotations (>=15%)
             if q_discount > Decimal("0.00") and (q_discount / q_subtotal) >= Decimal("0.15"):
                 appr = QuotationApproval(
                     id=uuid.uuid4(),
@@ -971,8 +1001,8 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
                 )
                 approval_audit_logs.append(aal)
 
-            # Negotiation Comments & Change Requests for subset
-            if q_idx % 3 == 0:
+            # Negotiation Comments & Change Requests for 1 in 3 quotes
+            if q_idx % 3 == 0 and len(portal_users) > 0:
                 target_portal_user = portal_users[(q_idx - 1) % len(portal_users)]
                 first_item = [it for it in quotation_items if it.quotation_id == quote.id][0]
 
@@ -1214,7 +1244,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
 
             # Subscriptions for 1 in 4 quotations
             if q_idx % 4 == 0:
-                sub_prod = products[18]  # Software license
+                sub_prod = products[min(18, len(products) - 1)]
                 sub_num = f"SUB-2025-{q_idx:04d}"
                 sub_status = rnd.choice(["ACTIVE", "ACTIVE", "ACTIVE", "PAUSED", "CANCELLED"])
                 sub_start = (q_date - timedelta(days=rnd.randint(30, 180))).date()
@@ -1409,7 +1439,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         await session.flush()
 
         # =========================================================================
-        # 10. AUTOMATION RULES & EXECUTIONS (20 Rules, 150+ Executions, 250+ Actions)
+        # 10. AUTOMATION RULES & EXECUTIONS (5 Rules, 80 Executions, 80 Actions)
         # =========================================================================
         automation_rules: List[AutomationRule] = []
         automation_execs: List[AutomationExecution] = []
@@ -1442,8 +1472,8 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         session.add_all(automation_rules)
         await session.flush()
 
-        # Executions for rules
-        for i in range(150):
+        auto_exec_count = cfg.get("automation_executions", 80)
+        for i in range(auto_exec_count):
             r = automation_rules[i % len(automation_rules)]
             target_deal = deals[i % len(deals)]
             e_status = rnd.choice(["SUCCESS", "SUCCESS", "SUCCESS", "FAILED", "PARTIAL_SUCCESS"])
@@ -1542,7 +1572,7 @@ async def seed_bulk_data(session: Optional[AsyncSession] = None, target_records:
         }
         total_records = sum(summary.values())
         summary["total_records"] = total_records
-        logger.info(f"Bulk data seeding completed successfully! Total records: {total_records}")
+        logger.info(f"Resized bulk data seeding completed successfully! Total records: {total_records}")
         return summary
 
     except Exception as exc:

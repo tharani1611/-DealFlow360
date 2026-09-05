@@ -1,7 +1,7 @@
 """
 DealFlow360 — 200 Synthetic Data Seeder CLI Script
 ===================================================
-CLI command to seed ~200 realistic, relationally connected synthetic records into 'bulk-data-lab'.
+CLI command to seed realistic, relationally connected synthetic records into 'bulk-data-lab'.
 
 Usage:
     python scripts/seed_200_data.py
@@ -21,10 +21,10 @@ from app.seed.seeder_200 import seed_200_data
 
 async def main():
     print("=" * 80)
-    print("DealFlow360 — 200 Synthetic Record Data Seeding System")
+    print("DealFlow360 — Resized Bulk Data Seeding System (200-Record Delegate)")
     print("=" * 80)
     print("Tenant Target : DealFlow360 Analytics Lab (slug: bulk-data-lab)")
-    print("Target Count  : ~200 Connected Business Records")
+    print("Target Count  : ~100–200 Major Entities (~3,500 Total Records)")
     print("=" * 80)
 
     start_time = time.time()
@@ -33,12 +33,12 @@ async def main():
         elapsed = time.time() - start_time
 
         print("\n" + "=" * 80)
-        print("200-RECORD DATA SEEDING COMPLETED SUCCESSFULLY!")
+        print("DATA SEEDING COMPLETED SUCCESSFULLY!")
         print("=" * 80)
         print(f"Execution Time          : {elapsed:.2f} seconds")
         print(f"Total Generated Records : {res.get('total_records', 0):,}")
         print("-" * 80)
-        print(f"  Tenants               : 1")
+        print(f"  Tenants               : {res.get('tenants', 0)}")
         print(f"  Users (Staff/Admin)   : {res.get('users', 0)}")
         print(f"  Customers             : {res.get('customers', 0)}")
         print(f"  Customer Contacts     : {res.get('contacts', 0)}")
@@ -66,7 +66,7 @@ async def main():
         print("=" * 80)
         sys.exit(0)
     except Exception as exc:
-        print(f"\n[ERROR] 200 data seeding failed: {exc}", file=sys.stderr)
+        print(f"\n[ERROR] Data seeding failed: {exc}", file=sys.stderr)
         sys.exit(1)
 
 
