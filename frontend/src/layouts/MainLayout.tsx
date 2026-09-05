@@ -64,6 +64,8 @@ export const MainLayout: React.FC = () => {
     { label: 'Invoices', path: '/invoices', icon: CreditCard },
     { label: 'Subscriptions', path: '/subscriptions', icon: Repeat },
     { label: 'Deals Pipeline', path: '/deals', icon: TrendingUp },
+    { label: 'Monitoring', path: '/monitoring', icon: ShieldCheck },
+    { label: 'Reports', path: '/reports', icon: BarChart3 },
     { label: 'Forecast', path: '/forecast', icon: BarChart3 },
     { label: 'Activities', path: '/activities', icon: Clock },
     { label: 'Automations', path: '/automations', icon: Workflow },

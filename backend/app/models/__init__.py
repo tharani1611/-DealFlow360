@@ -39,6 +39,9 @@ from app.models.subscription import (
     SubscriptionCancellation,
 )
 from app.models.credit_note import CreditNote, CreditNoteItem, PaymentRefund
+from app.models.deal_health import DealHealthSnapshot
+from app.models.nudge import Nudge, NudgeHistory
+from app.models.monitoring_event import MonitoringEvent
 
 __all__ = [
     "Organization",
@@ -86,4 +89,8 @@ __all__ = [
     "CreditNote",
     "CreditNoteItem",
     "PaymentRefund",
+    "DealHealthSnapshot",
+    "Nudge",
+    "NudgeHistory",
+    "MonitoringEvent",
 ]

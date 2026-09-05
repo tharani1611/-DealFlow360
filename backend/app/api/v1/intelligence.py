@@ -25,6 +25,15 @@ from app.schemas.intelligence import (
     Product360IntelligenceResponse,
     ProductAffinityItem
 )
+from app.schemas.health_monitoring import (
+    DealHealthEvaluationResponse,
+    StalledQuotesResponse,
+    DiscountAnomaliesResponse,
+    DeliverySlippageResponse,
+    NudgeResponse,
+    NudgeActionRequest,
+    ExecutiveReportingSummary,
+)
 from app.schemas.product_recommendation import CustomerProductRecommendationsResponse
 from app.schemas.forecast import RevenueForecastResponse, ForecastExplanationResponse
 from app.services import product_recommendations as recommendation_service
@@ -32,7 +41,15 @@ from app.services.customer_intelligence import customer_intelligence_service
 from app.services.product_intelligence import product_intelligence_service
 from app.services import intelligence as intelligence_service
 from app.services import forecast as forecast_service
+from app.services.deal_health_engine import deal_health_engine
+from app.services.stalled_quote_engine import stalled_quote_engine
+from app.services.discount_anomaly_engine import discount_anomaly_engine
+from app.services.delivery_slippage_engine import delivery_slippage_engine
+from app.services.nudge_engine import nudge_engine
+from app.services.reporting_engine import reporting_engine
+from app.services.analytics_service import analytics_service
 from app.ai.service import ai_service
+from datetime import date
 
 router = APIRouter()
 
@@ -344,4 +361,163 @@ async def get_product_360_intelligence(
     )
     prod_360.ai_explanation = explanation
     return prod_360
+
+
+# Phase 53–59 Endpoints: Health, Monitoring, Nudges, Reporting & Analytics
+
+@router.get(
+    "/deals/{deal_id}/health-evaluation",
+    response_model=DealHealthEvaluationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Phase 53: Authoritative Deal Health Evaluation",
+    description="Evaluates multi-dimensional deal telemetry, status classification, positive/negative drivers, and persists snapshot."
+)
+async def evaluate_deal_health(
+    deal_id: uuid.UUID,
+    persist_snapshot: bool = True,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> DealHealthEvaluationResponse:
+    return await deal_health_engine.evaluate_deal_health(
+        db, current_user.organization_id, deal_id, persist_snapshot=persist_snapshot
+    )
+
+
+@router.get(
+    "/quotations/stalled",
+    response_model=StalledQuotesResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Phase 54: Stalled Quotation Detection",
+    description="Detects quotations inactive past thresholds while excluding false positives."
+)
+async def get_stalled_quotations(
+    days_threshold: int = 14,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> StalledQuotesResponse:
+    return await stalled_quote_engine.detect_stalled_quotes(
+        db, current_user.organization_id, days_threshold=days_threshold
+    )
+
+
+@router.get(
+    "/discounts/anomalies",
+    response_model=DiscountAnomaliesResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Phase 55: Discount Anomaly Monitoring",
+    description="Monitors unusual commercial discount behavior compared against customer and org baselines."
+)
+async def get_discount_anomalies(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> DiscountAnomaliesResponse:
+    return await discount_anomaly_engine.monitor_discount_anomalies(
+        db, current_user.organization_id
+    )
+
+
+@router.get(
+    "/deliveries/slippage",
+    response_model=DeliverySlippageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Phase 56: Delivery Slippage Monitoring",
+    description="Monitors delivery promises, slippage days, status classification, and root causes."
+)
+async def get_delivery_slippage(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> DeliverySlippageResponse:
+    return await delivery_slippage_engine.monitor_delivery_slippage(
+        db, current_user.organization_id
+    )
+
+
+@router.get(
+    "/nudges",
+    response_model=List[NudgeResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Phase 57: List Actionable Nudges",
+    description="Retrieves active and historical system nudges."
+)
+async def list_nudges(
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> List[NudgeResponse]:
+    return await nudge_engine.list_nudges(
+        db, current_user.organization_id, status=status, severity=severity
+    )
+
+
+@router.post(
+    "/nudges/generate",
+    response_model=List[NudgeResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Phase 57: Evaluate and Generate System Nudges",
+    description="Evaluates monitoring telemetry and idempotently generates new system nudges."
+)
+async def generate_system_nudges(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> List[NudgeResponse]:
+    return await nudge_engine.evaluate_and_generate_system_nudges(
+        db, current_user.organization_id
+    )
+
+
+@router.post(
+    "/nudges/{nudge_id}/status",
+    response_model=NudgeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Phase 57: Update Nudge Lifecycle Status",
+    description="Transitions nudge status (ACKNOWLEDGED, COMPLETED, DISMISSED, ESCALATED) and logs audit entry."
+)
+async def update_nudge_status(
+    nudge_id: uuid.UUID,
+    target_status: str,
+    payload: Optional[NudgeActionRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> NudgeResponse:
+    notes = payload.notes if payload else None
+    return await nudge_engine.transition_nudge_status(
+        db, current_user.organization_id, nudge_id, target_status=target_status, actor_id=current_user.id, notes=notes
+    )
+
+
+@router.get(
+    "/reports/summary",
+    response_model=ExecutiveReportingSummary,
+    status_code=status.HTTP_200_OK,
+    summary="Phase 58: Authoritative Executive Reporting Summary",
+    description="Aggregates metrics across 6 core domains with Decimal financial accuracy."
+)
+async def get_executive_report_summary(
+    period: str = "this_month",
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> ExecutiveReportingSummary:
+    return await reporting_engine.generate_executive_report(
+        db, current_user.organization_id, period=period, start_date=start_date, end_date=end_date
+    )
+
+
+@router.get(
+    "/analytics/dashboard",
+    status_code=status.HTTP_200_OK,
+    summary="Phase 59: Executive Dashboard Analytics API",
+    description="Consolidates reporting, monitoring, and nudge telemetry into an executive dashboard payload."
+)
+async def get_executive_dashboard_analytics(
+    period: str = "this_month",
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    return await analytics_service.get_dashboard_executive_analytics(
+        db, current_user.organization_id, period=period
+    )
+
 

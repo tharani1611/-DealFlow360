@@ -1792,5 +1792,203 @@ export interface PaymentRefund {
   created_at: string;
 }
 
+// Phase 53: Deal Health Engine
+export interface DealHealthSnapshot {
+  id: string;
+  organization_id: string;
+  deal_id: string;
+  health_score: number;
+  health_status: 'HEALTHY' | 'ATTENTION' | 'CRITICAL' | 'STALLED';
+  positive_drivers: string[];
+  negative_drivers: string[];
+  recommended_actions: string[];
+  evaluated_at: string;
+  created_at: string;
+}
+
+// Phase 54: Stalled Quote Detection
+export interface StalledQuoteItem {
+  quotation_id: string;
+  quotation_number: string;
+  customer_id: string;
+  customer_name: string;
+  total_amount: string;
+  status: string;
+  quotation_date: string;
+  days_inactive: number;
+  stall_reason: string;
+  stall_category: 'ATTENTION' | 'CRITICAL';
+}
+
+export interface StalledQuotesResponse {
+  stalled_quotes: StalledQuoteItem[];
+  total_stalled_count: number;
+  generated_at: string;
+}
+
+// Phase 55: Discount Anomaly Monitoring
+export interface DiscountAnomalyItem {
+  quotation_id: string;
+  quotation_number: string;
+  customer_id: string;
+  customer_name: string;
+  blended_discount_percent: string;
+  historical_customer_avg_discount?: string | null;
+  historical_product_avg_discount?: string | null;
+  organization_avg_discount: string;
+  variance_percent: string;
+  anomaly_score: number;
+  severity: 'NORMAL' | 'WATCH' | 'ANOMALOUS' | 'CRITICAL';
+  insufficient_historical_data: boolean;
+  sample_size: number;
+  evidence: string[];
+  created_at: string;
+}
+
+export interface DiscountAnomaliesResponse {
+  anomalies: DiscountAnomalyItem[];
+  anomalous_count: number;
+  generated_at: string;
+}
+
+// Phase 56: Delivery Slippage Monitoring
+export interface DeliverySlippageItem {
+  delivery_promise_id: string;
+  quotation_id: string;
+  quotation_number: string;
+  customer_id: string;
+  customer_name: string;
+  shipment_id?: string | null;
+  backorder_id?: string | null;
+  promised_date: string;
+  expected_date: string;
+  actual_date?: string | null;
+  slippage_days: number;
+  status: 'ON_TRACK' | 'AT_RISK' | 'DELAYED' | 'DELIVERED';
+  root_cause: string;
+  evidence: string[];
+}
+
+export interface DeliverySlippageResponse {
+  deliveries: DeliverySlippageItem[];
+  at_risk_count: number;
+  delayed_count: number;
+  generated_at: string;
+}
+
+// Phase 57: Nudges & Escalations
+export type NudgeStatus = 'CREATED' | 'OPEN' | 'ACKNOWLEDGED' | 'COMPLETED' | 'DISMISSED' | 'ESCALATED';
+
+export interface NudgeHistory {
+  id: string;
+  organization_id: string;
+  nudge_id: string;
+  from_status?: NudgeStatus | null;
+  to_status: NudgeStatus;
+  user_id?: string | null;
+  user_name?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface Nudge {
+  id: string;
+  organization_id: string;
+  nudge_type: string;
+  severity: 'INFO' | 'WARNING' | 'URGENT' | 'CRITICAL';
+  title: string;
+  message: string;
+  entity_type: string;
+  entity_id: string;
+  dedup_hash: string;
+  status: NudgeStatus;
+  assigned_user_id?: string | null;
+  action_payload?: Record<string, any> | null;
+  escalated_at?: string | null;
+  history?: NudgeHistory[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NudgesResponse {
+  nudges: Nudge[];
+  open_count: number;
+  urgent_count: number;
+  generated_at: string;
+}
+
+// Phase 58 & 59: Reporting & Analytics
+export interface ReportDomainSales {
+  pipeline_total_value: string;
+  open_deals_count: number;
+  won_deals_count: number;
+  lost_deals_count: number;
+  won_revenue: string;
+  win_rate_percent: string;
+}
+
+export interface ReportDomainQuotations {
+  total_quotations_count: number;
+  draft_count: number;
+  sent_count: number;
+  accepted_count: number;
+  rejected_count: number;
+  expired_count: number;
+  conversion_rate_percent: string;
+  average_quotation_value: string;
+}
+
+export interface ReportDomainFulfillment {
+  total_deliveries: number;
+  on_track_count: number;
+  at_risk_count: number;
+  delayed_count: number;
+  delivered_count: number;
+  on_time_delivery_percent: string;
+  average_slippage_days: string;
+}
+
+export interface ReportDomainCommercial {
+  gross_revenue: string;
+  gross_margin: string;
+  gross_margin_percent: string;
+  total_discounts_given: string;
+  average_discount_percent: string;
+  pending_approvals_count: number;
+}
+
+export interface ReportDomainSubscriptions {
+  active_subscriptions_count: number;
+  monthly_recurring_revenue: string;
+  annual_recurring_revenue: string;
+  churn_count: number;
+  churn_rate_percent: string;
+}
+
+export interface ExecutiveReportSummaryResponse {
+  period: string;
+  sales: ReportDomainSales;
+  quotations: ReportDomainQuotations;
+  fulfillment: ReportDomainFulfillment;
+  commercial: ReportDomainCommercial;
+  subscriptions: ReportDomainSubscriptions;
+  generated_at: string;
+}
+
+export interface ExecutiveAnalyticsResponse {
+  organization_id: string;
+  period: string;
+  reporting: ExecutiveReportSummaryResponse;
+  monitoring_summary: {
+    stalled_quotes_count: number;
+    discount_anomalies_count: number;
+    delivery_slippage_count: number;
+    open_nudges_count: number;
+    urgent_nudges_count: number;
+  };
+  generated_at: string;
+}
+
+
 
 
