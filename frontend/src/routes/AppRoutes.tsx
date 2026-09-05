@@ -24,6 +24,8 @@ import { InvoicesPage } from '../pages/InvoicesPage';
 import { SubscriptionsPage } from '../pages/SubscriptionsPage';
 import { MonitoringPage } from '../pages/MonitoringPage';
 import { ReportsPage } from '../pages/ReportsPage';
+import { UnauthorizedPage } from '../pages/UnauthorizedPage';
+import { NotFoundPage } from '../pages/NotFoundPage';
 import { LoadingState } from '../components/ui/EmptyState';
 
 import { PortalLoginPage } from '../pages/PortalLoginPage';
@@ -87,9 +89,10 @@ export const AppRoutes: React.FC = () => {
         <Route path="automations" element={<AutomationsPage />} />
         <Route path="ai" element={<AIPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="unauthorized" element={<UnauthorizedPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 };

@@ -6,7 +6,7 @@ import { authApi } from '../services/authApi';
 import { GlassCard } from '../components/ui/GlassCard';
 import { GlassInput } from '../components/ui/GlassInput';
 import { BrutalButton } from '../components/ui/BrutalButton';
-import { Shield } from 'lucide-react';
+import { Shield, Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login, register } = useAuth();
@@ -14,6 +14,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form State
   const [orgSlug, setOrgSlug] = useState('');
@@ -146,14 +147,24 @@ export const LoginPage: React.FC = () => {
               required
             />
 
-            <GlassInput
-              label="Password"
-              type="password"
-              placeholder="••••••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="relative">
+              <GlassInput
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-9 text-slate-400 hover:text-white text-xs p-1"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
 
             <div className="pt-2">
               <BrutalButton

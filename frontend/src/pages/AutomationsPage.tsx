@@ -73,7 +73,7 @@ export const AutomationsPage: React.FC = () => {
     try {
       const recs = await automationsApi.getAiRecommendations();
       setAiRecommendations(recs);
-      showToast('AI Automation Rule recommendations generated.', 'ai');
+      showToast('AI Automation Rule recommendations generated.', 'info');
     } catch (err: any) {
       showToast(err.message || 'Failed to generate AI recommendations.', 'error');
     } finally {
@@ -142,7 +142,7 @@ export const AutomationsPage: React.FC = () => {
         conditions: rec.recommended_conditions,
         actions: rec.recommended_actions
       });
-      showToast(`Rule "${rec.rule_name}" created from AI recommendation.`, 'ai');
+      showToast(`Rule "${rec.rule_name}" created from AI recommendation.`, 'info');
       loadData();
     } catch (err: any) {
       showToast(err.message || 'Failed to create rule from recommendation.', 'error');

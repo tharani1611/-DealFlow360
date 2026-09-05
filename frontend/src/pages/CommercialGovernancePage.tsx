@@ -13,7 +13,7 @@ import { Plus, ShieldCheck, ShieldAlert, Trash2 } from 'lucide-react';
 
 export const CommercialGovernancePage: React.FC = () => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'policies' | 'approvals'>('policies');
+  const [activeTab, setActiveTab] = useState<'policies' | 'approvals' | 'inbox'>('policies');
 
   const [policies, setPolicies] = useState<DiscountPolicy[]>([]);
   const [approvalRules, setApprovalRules] = useState<ApprovalRule[]>([]);

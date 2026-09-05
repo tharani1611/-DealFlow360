@@ -135,7 +135,7 @@ export const CustomerDetailPage: React.FC = () => {
     try {
       const res = await aiApi.getCustomerSummary(id);
       setAiSummary(res);
-      showToast('AI Relationship Intelligence summary generated.', 'ai');
+      showToast('AI Relationship Intelligence summary generated.', 'info');
     } catch (err: any) {
       showToast(err.message || 'Failed to generate AI summary.', 'error');
     } finally {

@@ -49,7 +49,7 @@ export const ForecastPage: React.FC = () => {
     try {
       const res = await forecastApi.getForecastExplanation();
       setAiExplanation(res);
-      showToast('AI Executive Revenue Forecast explanation generated.', 'ai');
+      showToast('AI Executive Revenue Forecast explanation generated.', 'info');
     } catch (err: any) {
       showToast(err.message || 'Failed to generate AI explanation.', 'error');
     } finally {

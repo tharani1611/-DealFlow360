@@ -35,6 +35,8 @@ export const DashboardPage: React.FC = () => {
   const [intel, setIntel] = useState<DashboardIntelligenceResponse | null>(null);
   const [attentionData, setAttentionData] = useState<AttentionCenterResponse | null>(null);
   const [forecast, setForecast] = useState<RevenueForecastResponse | null>(null);
+  const [_analytics, setAnalytics] = useState<any | null>(null);
+  const [period, setPeriod] = useState<string>('this_month');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -45,16 +47,18 @@ export const DashboardPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const [dealsData, intelData, attData, fcData] = await Promise.all([
+      const [dealsData, intelData, attData, fcData, analyticsData] = await Promise.all([
         dealApi.getDeals({ limit: 10 }),
         intelligenceApi.getDashboardIntelligence().catch(() => null),
         intelligenceApi.getAttention().catch(() => null),
         forecastApi.getForecast().catch(() => null),
+        intelligenceApi.getExecutiveAnalytics(period).catch(() => null),
       ]);
       setDeals(dealsData);
       setIntel(intelData);
       setAttentionData(attData);
       setForecast(fcData);
+      setAnalytics(analyticsData);
     } catch (err: any) {
       setError(err.message || 'Failed to load dashboard operational data.');
     } finally {
@@ -64,7 +68,7 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [period]);
 
   const handleAskAi = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -271,9 +275,22 @@ export const DashboardPage: React.FC = () => {
                 <p className="text-xs font-bold text-slate-200 font-mono uppercase tracking-wider">NO ACTIVE SALES PIPELINE</p>
                 <p className="text-xs text-slate-400">Create your first deal opportunity to start seeing pipeline intelligence.</p>
                 <div className="pt-2">
-                  <BrutalButton variant="primary" size="sm" icon={Plus} onClick={() => navigate('/deals')}>
-                    Create First Deal
-                  </BrutalButton>
+                  <div className="flex items-center gap-3">
+                    <select
+                      value={period}
+                      onChange={(e) => setPeriod(e.target.value)}
+                      className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-200 font-mono focus:outline-none cursor-pointer"
+                    >
+                      <option value="this_month">This Month</option>
+                      <option value="last_month">Last Month</option>
+                      <option value="this_quarter">This Quarter</option>
+                      <option value="this_year">This Year</option>
+                    </select>
+                    <BrutalButton variant="primary" size="sm" onClick={() => navigate('/deals')}>
+                      <Plus className="w-4 h-4 mr-1.5" />
+                      New Deal
+                    </BrutalButton>
+                  </div>
                 </div>
               </div>
             ) : (
