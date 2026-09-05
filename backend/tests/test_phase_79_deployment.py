@@ -1,4 +1,4 @@
-﻿"""
+"""
 Phase 79 — Deployment, Health, and Production Configuration Verification Suite
 =============================================================================
 Tests:
@@ -18,35 +18,37 @@ from app.core.config import Settings
 
 @pytest.mark.asyncio
 async def test_production_health_endpoint():
-    """Verify /api/v1/health returns 200 with standard health schema and no secret leak."""
+    """Verify /api/v1/health and /api/v1/live return 200 with standard health schema and no secret leak."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/v1/health")
-        assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert data["status"] == "healthy"
-        assert "app_name" in data
-        assert "environment" in data
-        assert "timestamp" in data
-        assert "version" in data
+        for path in ("/api/v1/health", "/api/v1/live"):
+            resp = await client.get(path)
+            assert resp.status_code == status.HTTP_200_OK
+            data = resp.json()
+            assert data["status"] == "healthy"
+            assert "app_name" in data
+            assert "environment" in data
+            assert "timestamp" in data
+            assert "version" in data
 
-        # Security check: zero database credentials or secrets leaked
-        assert "password" not in resp.text.lower()
-        assert "secret" not in resp.text.lower()
-        assert "database_url" not in resp.text.lower()
+            # Security check: zero database credentials or secrets leaked
+            assert "password" not in resp.text.lower()
+            assert "secret" not in resp.text.lower()
+            assert "database_url" not in resp.text.lower()
 
 
 @pytest.mark.asyncio
 async def test_production_readiness_endpoint():
-    """Verify /api/v1/readiness returns 200 with database connection status."""
+    """Verify /api/v1/readiness and /api/v1/ready return 200 with database connection status."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/v1/readiness")
-        assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert data["status"] in ("ready", "degraded")
-        assert "database_connected" in data
-        assert isinstance(data["database_connected"], bool)
+        for path in ("/api/v1/readiness", "/api/v1/ready"):
+            resp = await client.get(path)
+            assert resp.status_code == status.HTTP_200_OK
+            data = resp.json()
+            assert data["status"] in ("ready", "degraded")
+            assert "database_connected" in data
+            assert isinstance(data["database_connected"], bool)
 
 
 @pytest.mark.asyncio

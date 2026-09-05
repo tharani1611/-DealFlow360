@@ -21,6 +21,7 @@ class ReadinessResponse(BaseModel):
 
 
 @router.get("/health", response_model=HealthResponse, status_code=status.HTTP_200_OK)
+@router.get("/live", response_model=HealthResponse, status_code=status.HTTP_200_OK)
 async def health_check():
     """System health check endpoint verifying application execution status."""
     return HealthResponse(
@@ -33,6 +34,7 @@ async def health_check():
 
 
 @router.get("/readiness", response_model=ReadinessResponse, status_code=status.HTTP_200_OK)
+@router.get("/ready", response_model=ReadinessResponse, status_code=status.HTTP_200_OK)
 async def readiness_check():
     """System readiness check endpoint verifying database connectivity."""
     db_connected = await check_database_connection()
