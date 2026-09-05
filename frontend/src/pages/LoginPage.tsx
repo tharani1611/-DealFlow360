@@ -179,6 +179,43 @@ export const LoginPage: React.FC = () => {
             </div>
           </form>
 
+          {!isRegisterMode && (
+            <div className="mt-4 pt-4 border-t border-slate-800/80">
+              <p className="text-[11px] font-semibold text-slate-400 mb-2 tracking-wide uppercase">
+                Quick Demo & Dataset Presets
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrgSlug('bulk-data-lab');
+                    setEmail('lab.admin@dealflow.test');
+                    setPassword('BulkPass123!');
+                    setErrorMessage('');
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-500/40 hover:bg-indigo-900/60 hover:border-indigo-400 text-indigo-200 text-xs font-medium text-left transition-colors flex flex-col"
+                >
+                  <span className="font-bold text-indigo-300">📊 Bulk Data Lab</span>
+                  <span className="text-[10px] text-slate-400">8,290+ Records</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrgSlug('demo-enterprise');
+                    setEmail('sales@dealflow.demo');
+                    setPassword('DemoPass123!');
+                    setErrorMessage('');
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-700/60 hover:bg-slate-800 hover:border-slate-500 text-slate-200 text-xs font-medium text-left transition-colors flex flex-col"
+                >
+                  <span className="font-bold text-slate-300">🏢 Demo Enterprise</span>
+                  <span className="text-[10px] text-slate-400">Showcase Data</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 pt-4 border-t border-slate-800 text-center">
             <span className="text-[10px] font-mono text-slate-500 flex items-center justify-center gap-1">
               <Shield className="w-3 h-3 text-emerald-400" /> Multi-Tenant Isolation & JWT Auth Secured
