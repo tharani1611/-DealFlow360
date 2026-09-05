@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import AsyncGenerator, Optional
-from sqlalchemy import MetaData, DateTime, func
+from sqlalchemy import MetaData, DateTime, func, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
@@ -91,7 +91,7 @@ async def check_database_connection() -> bool:
     """Verifies PostgreSQL database connectivity."""
     try:
         async with engine.connect() as conn:
-            await conn.execute(func.now())
+            await conn.execute(text("SELECT 1"))
             return True
     except Exception as exc:
         logger.warning(f"Database connection check failed: {exc}")
