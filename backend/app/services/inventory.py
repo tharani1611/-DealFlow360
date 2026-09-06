@@ -142,6 +142,24 @@ async def get_inventory_stocks(
     return list(result.scalars().all())
 
 
+async def get_inventory_movements(
+    session: AsyncSession,
+    organization_id: uuid.UUID,
+    warehouse_id: Optional[uuid.UUID] = None,
+    product_id: Optional[uuid.UUID] = None,
+) -> List[InventoryMovement]:
+    """Retrieve inventory stock movement ledger records."""
+    stmt = select(InventoryMovement).where(InventoryMovement.organization_id == organization_id).order_by(InventoryMovement.created_at.desc())
+    if warehouse_id:
+        stmt = stmt.where(InventoryMovement.warehouse_id == warehouse_id)
+    if product_id:
+        stmt = stmt.where(InventoryMovement.product_id == product_id)
+
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+
 # --- Phase 37 Services: Authoritative Stock Availability Calculation ---
 
 async def calculate_quotation_availability(

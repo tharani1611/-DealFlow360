@@ -25,7 +25,7 @@ export const PricingRulesBreakdownModal: React.FC<PricingRulesBreakdownModalProp
         <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex justify-between items-center">
           <div>
             <div className="text-slate-400 font-mono text-[11px] uppercase">Base Unit Price</div>
-            <div className="text-2xl font-black text-white font-mono mt-0.5">${basePrice.toFixed(2)} {product.currency}</div>
+            <div className="text-2xl font-black text-white font-mono mt-0.5">₹{basePrice.toFixed(2)} {product.currency}</div>
           </div>
           <Tag className="w-8 h-8 text-indigo-400 opacity-80" />
         </div>
@@ -43,7 +43,7 @@ export const PricingRulesBreakdownModal: React.FC<PricingRulesBreakdownModalProp
                 <span className="font-bold text-slate-200">Tier 1 (Standard): 1–10 units</span>
                 <p className="text-[11px] text-slate-400">List price — 0% discount</p>
               </div>
-              <span className="font-mono font-bold text-white">${basePrice.toFixed(2)}</span>
+              <span className="font-mono font-bold text-white">₹{basePrice.toFixed(2)}</span>
             </div>
 
             <div className="p-3 rounded-lg bg-black/20 border border-white/10 flex justify-between items-center">

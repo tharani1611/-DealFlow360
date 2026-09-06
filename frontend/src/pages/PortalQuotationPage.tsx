@@ -4,7 +4,8 @@ import { PortalQuotationDetailResponse, PortalQuotationListItemResponse, PortalU
 import { portalApi } from '../services/portalApi';
 import { LineCommentsModal } from '../components/negotiation/LineCommentsModal';
 import { ChangeRequestModal } from '../components/negotiation/ChangeRequestModal';
-import { Shield, FileText, CheckCircle2, XCircle, MessageSquare, Edit3, LogOut, Calendar } from 'lucide-react';
+import { CoNegotiatorSimulatorModal } from '../components/negotiation/CoNegotiatorSimulatorModal';
+import { Shield, FileText, CheckCircle2, XCircle, MessageSquare, Edit3, LogOut, Calendar, Bot } from 'lucide-react';
 
 export const PortalQuotationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export const PortalQuotationPage: React.FC = () => {
   // Modals
   const [selectedItemForComments, setSelectedItemForComments] = useState<{ id: string; name: string } | null>(null);
   const [showChangeRequestModal, setShowChangeRequestModal] = useState<boolean>(false);
+  const [showCoNegotiatorModal, setShowCoNegotiatorModal] = useState<boolean>(false);
   const [selectedItemForCR, setSelectedItemForCR] = useState<{ id: string; name: string } | null>(null);
   const [actionReason, setActionReason] = useState<string>('');
   const [submittingAction, setSubmittingAction] = useState<boolean>(false);
@@ -164,7 +166,7 @@ export const PortalQuotationPage: React.FC = () => {
                 </span>
               </div>
               <div className="text-xs text-slate-400 flex items-center justify-between">
-                <span>Total: ${parseFloat(item.total_amount).toLocaleString()}</span>
+                <span>Total: ₹{parseFloat(item.total_amount).toLocaleString()}</span>
                 <span>{new Date(item.created_at).toLocaleDateString()}</span>
               </div>
             </button>
@@ -206,10 +208,10 @@ export const PortalQuotationPage: React.FC = () => {
 
                   <div className="text-right">
                     <div className="text-2xl font-black text-emerald-400">
-                      ${parseFloat(activeQuotation.total_amount).toLocaleString()} {activeQuotation.currency}
+                      ₹{parseFloat(activeQuotation.total_amount).toLocaleString()} {activeQuotation.currency}
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
-                      Subtotal: ${parseFloat(activeQuotation.subtotal).toLocaleString()} | Tax: ${parseFloat(activeQuotation.tax_amount).toLocaleString()}
+                      Subtotal: ₹{parseFloat(activeQuotation.subtotal).toLocaleString()} | Tax: ₹{parseFloat(activeQuotation.tax_amount).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -244,15 +246,23 @@ export const PortalQuotationPage: React.FC = () => {
               <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
                 <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-white">Line Items</h3>
-                  <button
-                    onClick={() => {
-                      setSelectedItemForCR(null);
-                      setShowChangeRequestModal(true);
-                    }}
-                    className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" /> Propose Proposal Adjustment
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowCoNegotiatorModal(true)}
+                      className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                    >
+                      <Bot className="w-3.5 h-3.5 text-indigo-400" /> AI Co-Negotiator Simulator
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedItemForCR(null);
+                        setShowChangeRequestModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" /> Propose Adjustment
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -275,11 +285,11 @@ export const PortalQuotationPage: React.FC = () => {
                             {item.sku && <div className="text-[11px] text-slate-400">SKU: {item.sku}</div>}
                           </td>
                           <td className="p-3.5 text-right font-medium">{item.quantity}</td>
-                          <td className="p-3.5 text-right">${parseFloat(item.unit_price).toFixed(2)}</td>
+                          <td className="p-3.5 text-right">₹{parseFloat(item.unit_price).toFixed(2)}</td>
                           <td className="p-3.5 text-right text-emerald-400">
-                            {parseFloat(item.discount_percent as string) > 0 ? `${item.discount_percent}%` : '-'}
+                            {parseFloat(item.discount_percent as string) > 0 ? `₹${item.discount_percent}%` : '-'}
                           </td>
-                          <td className="p-3.5 text-right font-bold text-white">${parseFloat(item.line_total).toFixed(2)}</td>
+                          <td className="p-3.5 text-right font-bold text-white">₹{parseFloat(item.line_total).toFixed(2)}</td>
                           <td className="p-3.5 text-center">
                             <button
                               onClick={() => setSelectedItemForComments({ id: item.id, name: item.product_name || 'Line Item' })}
@@ -354,6 +364,20 @@ export const PortalQuotationPage: React.FC = () => {
           itemName={selectedItemForCR?.name}
           isPortal={true}
           onClose={() => setShowChangeRequestModal(false)}
+          onSuccess={() => initPortal()}
+        />
+      )}
+
+      {showCoNegotiatorModal && activeQuotation && (
+        <CoNegotiatorSimulatorModal
+          quotationId={activeQuotation.id}
+          quotationNumber={activeQuotation.quotation_number}
+          initialDiscountPercent={
+            parseFloat(activeQuotation.discount_amount || '0') > 0 && parseFloat(activeQuotation.subtotal || '0') > 0
+              ? (parseFloat(activeQuotation.discount_amount) / parseFloat(activeQuotation.subtotal)) * 100
+              : 10.0
+          }
+          onClose={() => setShowCoNegotiatorModal(false)}
           onSuccess={() => initPortal()}
         />
       )}

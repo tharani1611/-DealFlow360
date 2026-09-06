@@ -78,7 +78,7 @@ export const ProrationPreviewModal: React.FC<ProrationPreviewModalProps> = ({
           <div>
             <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Current State</div>
             <div className="text-sm font-mono text-slate-200 mt-1">
-              Quantity: {subscription.quantity} @ ${Number(subscription.unit_price).toFixed(2)}
+              Quantity: {subscription.quantity} @ ₹{Number(subscription.unit_price).toFixed(2)}
             </div>
             <div className="text-xs text-slate-400 mt-1">
               Next Billing: {subscription.next_billing_date}
@@ -99,7 +99,7 @@ export const ProrationPreviewModal: React.FC<ProrationPreviewModalProps> = ({
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500">Unit Price ($)</label>
+                <label className="text-[10px] text-slate-500">Unit Price (₹)</label>
                 <input
                   type="number"
                   min="0"
@@ -138,16 +138,16 @@ export const ProrationPreviewModal: React.FC<ProrationPreviewModalProps> = ({
               <span className="text-slate-200 text-right">{calculation.remaining_days} days</span>
 
               <span className="text-slate-400">Unused Credit (Current Plan):</span>
-              <span className="text-emerald-400 text-right">-${Number(calculation.unused_amount).toFixed(2)}</span>
+              <span className="text-emerald-400 text-right">-₹{Number(calculation.unused_amount).toFixed(2)}</span>
 
               <span className="text-slate-400">Prorated Charge (New Plan):</span>
-              <span className="text-indigo-400 text-right">+${Number(calculation.new_amount).toFixed(2)}</span>
+              <span className="text-indigo-400 text-right">+₹{Number(calculation.new_amount).toFixed(2)}</span>
 
               <div className="col-span-2 border-t border-slate-800 my-1"></div>
 
               <span className="text-slate-200 font-bold">Net Prorated Adjustment:</span>
               <span className="text-amber-400 font-bold text-right text-sm">
-                ${Number(calculation.net_prorated_amount).toFixed(2)}
+                ₹{Number(calculation.net_prorated_amount).toFixed(2)}
               </span>
             </div>
           </div>

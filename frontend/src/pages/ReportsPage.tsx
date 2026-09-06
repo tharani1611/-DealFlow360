@@ -110,11 +110,11 @@ export const ReportsPage: React.FC = () => {
             <div className="space-y-3 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Pipeline Total Value</span>
-                <span className="font-mono font-bold text-white">${report.sales.pipeline_total_value}</span>
+                <span className="font-mono font-bold text-white">₹{report.sales.pipeline_total_value}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Won Revenue</span>
-                <span className="font-mono font-bold text-emerald-400">${report.sales.won_revenue}</span>
+                <span className="font-mono font-bold text-emerald-400">₹{report.sales.won_revenue}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Deals Won / Open</span>
@@ -144,7 +144,7 @@ export const ReportsPage: React.FC = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Average Quote Value</span>
-                <span className="font-mono text-slate-200">${report.quotations.average_quotation_value}</span>
+                <span className="font-mono text-slate-200">₹{report.quotations.average_quotation_value}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-white/10">
                 <span className="text-slate-400 font-semibold">Conversion Rate</span>
@@ -162,15 +162,15 @@ export const ReportsPage: React.FC = () => {
             <div className="space-y-3 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Gross Revenue</span>
-                <span className="font-mono font-bold text-white">${report.commercial.gross_revenue}</span>
+                <span className="font-mono font-bold text-white">₹{report.commercial.gross_revenue}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Gross Margin</span>
-                <span className="font-mono font-bold text-indigo-300">${report.commercial.gross_margin}</span>
+                <span className="font-mono font-bold text-indigo-300">₹{report.commercial.gross_margin}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Total Discounts Given</span>
-                <span className="font-mono text-amber-300">${report.commercial.total_discounts_given}</span>
+                <span className="font-mono text-amber-300">₹{report.commercial.total_discounts_given}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-white/10">
                 <span className="text-slate-400 font-semibold">Gross Margin %</span>
@@ -192,11 +192,11 @@ export const ReportsPage: React.FC = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Monthly Recurring (MRR)</span>
-                <span className="font-mono font-bold text-emerald-400">${report.subscriptions.monthly_recurring_revenue}</span>
+                <span className="font-mono font-bold text-emerald-400">₹{report.subscriptions.monthly_recurring_revenue}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Annualized Recurring (ARR)</span>
-                <span className="font-mono font-bold text-emerald-300">${report.subscriptions.annual_recurring_revenue}</span>
+                <span className="font-mono font-bold text-emerald-300">₹{report.subscriptions.annual_recurring_revenue}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-white/10">
                 <span className="text-slate-400 font-semibold">Churn Rate</span>

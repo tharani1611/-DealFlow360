@@ -32,7 +32,10 @@ class Product(Base, UUIDMixin, TimestampMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0.00"), server_default="0.00", nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), default="USD", server_default="USD", nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="INR", server_default="INR", nullable=False)
+    hsn_sac_code: Mapped[Optional[str]] = mapped_column(String(10), default="8471", server_default="8471", nullable=True)
+    gst_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal("18.00"), server_default="18.00", nullable=False)
+    image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
 
     # Relationships

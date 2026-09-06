@@ -58,7 +58,7 @@ export const ProductOpportunityCard: React.FC<ProductOpportunityCardProps> = ({
         <div className="shrink-0 text-right space-y-2 font-mono">
           <div>
             <span className="text-[10px] text-slate-500 uppercase font-bold block">Target Price</span>
-            <span className="text-sm font-extrabold text-slate-100">${Number(recommendation.unit_price).toLocaleString()}</span>
+            <span className="text-sm font-extrabold text-slate-100">₹{Number(recommendation.unit_price).toLocaleString()}</span>
           </div>
 
           {onCreateActivity && (

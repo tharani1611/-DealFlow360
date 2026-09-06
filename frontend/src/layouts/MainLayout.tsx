@@ -3,11 +3,9 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  UserCheck,
   Package,
   FileText,
   TrendingUp,
-  Clock,
   Sparkles,
   Settings,
   LogOut,
@@ -15,18 +13,20 @@ import {
   Building2,
   ChevronRight,
   Bell,
-  ShieldCheck,
-  BarChart3,
-  Workflow,
   Warehouse,
   CreditCard,
   Repeat,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { GlassDrawer } from '../components/ui/GlassDrawer';
 import { NotificationDrawer } from '../components/intelligence/NotificationDrawer';
+import { AICopilotDrawer } from '../components/intelligence/AICopilotDrawer';
 import { intelligenceApi } from '../services/intelligenceApi';
 import { AlertsResponse } from '../types';
+
+import { getUserRole, getRoleLabel } from '../utils/roleUtils';
+import { Activity as ActivityIcon } from 'lucide-react';
 
 export const MainLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -34,8 +34,11 @@ export const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const [alertsData, setAlertsData] = useState<AlertsResponse | null>(null);
   const [alertsLoading, setAlertsLoading] = useState(false);
+
+  const role = getUserRole(user);
 
   useEffect(() => {
     fetchAlerts();
@@ -53,25 +56,50 @@ export const MainLayout: React.FC = () => {
     }
   };
 
-  const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Customers', path: '/customers', icon: Users },
-    { label: 'Contacts', path: '/contacts', icon: UserCheck },
-    { label: 'Products', path: '/products', icon: Package },
-    { label: 'Quotations', path: '/quotations', icon: FileText },
-    { label: 'Governance', path: '/governance', icon: ShieldCheck },
-    { label: 'Inventory', path: '/inventory', icon: Warehouse },
-    { label: 'Invoices', path: '/invoices', icon: CreditCard },
-    { label: 'Subscriptions', path: '/subscriptions', icon: Repeat },
-    { label: 'Deals Pipeline', path: '/deals', icon: TrendingUp },
-    { label: 'Monitoring', path: '/monitoring', icon: ShieldCheck },
-    { label: 'Reports', path: '/reports', icon: BarChart3 },
-    { label: 'Forecast', path: '/forecast', icon: BarChart3 },
-    { label: 'Activities', path: '/activities', icon: Clock },
-    { label: 'Automations', path: '/automations', icon: Workflow },
-    { label: 'AI Intelligence', path: '/ai', icon: Sparkles },
-    { label: 'Settings', path: '/settings', icon: Settings },
-  ];
+  const getRoleNavItems = () => {
+    switch (role) {
+      case 'sales_rep':
+        return [
+          { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+          { label: 'Deals Pipeline', path: '/deals', icon: TrendingUp },
+          { label: 'Quotations', path: '/quotations', icon: FileText },
+          { label: 'Customers', path: '/customers', icon: Users },
+          { label: 'Products', path: '/products', icon: Package },
+          { label: 'Subscriptions', path: '/subscriptions', icon: Repeat },
+        ];
+      case 'inventory_manager':
+        return [
+          { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+          { label: 'Inventory & Stock', path: '/inventory', icon: Warehouse },
+          { label: 'Products Catalog', path: '/products', icon: Package },
+          { label: 'Quotations Check', path: '/quotations', icon: FileText },
+        ];
+      case 'billing_controller':
+        return [
+          { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+          { label: 'Invoices & Payments', path: '/invoices', icon: CreditCard },
+          { label: 'Subscriptions', path: '/subscriptions', icon: Repeat },
+          { label: 'Customers', path: '/customers', icon: Users },
+        ];
+      case 'admin':
+      default:
+        return [
+          { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+          { label: 'Deals Pipeline', path: '/deals', icon: TrendingUp },
+          { label: 'Quotations', path: '/quotations', icon: FileText },
+          { label: 'Customers', path: '/customers', icon: Users },
+          { label: 'Products', path: '/products', icon: Package },
+          { label: 'Inventory', path: '/inventory', icon: Warehouse },
+          { label: 'Invoices', path: '/invoices', icon: CreditCard },
+          { label: 'Subscriptions', path: '/subscriptions', icon: Repeat },
+          { label: 'Approval Inbox', path: '/approvals', icon: ShieldCheck },
+          { label: 'Company Activity', path: '/activity', icon: ActivityIcon },
+          { label: 'Settings', path: '/settings', icon: Settings },
+        ];
+    }
+  };
+
+  const navItems = getRoleNavItems();
 
   const handleLogout = () => {
     logout();
@@ -123,7 +151,7 @@ export const MainLayout: React.FC = () => {
                 >
                   {/* Left Active Indicator */}
                   {isActive && <div className="absolute -left-4 top-2 bottom-2 w-1.5 bg-indigo-400 rounded-r-md" />}
-                  <Icon className={`w-4 h-4 shrink-0 ${item.path === '/ai' ? 'text-purple-400' : ''}`} />
+                  <Icon className="w-4 h-4 shrink-0" />
                   <span className="flex-1">{item.label}</span>
                   {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
                 </Link>
@@ -139,8 +167,8 @@ export const MainLayout: React.FC = () => {
               <span className="font-extrabold text-slate-200 truncate">{user?.full_name || user?.email || 'User'}</span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] font-mono text-indigo-400 uppercase font-bold">
-                  {user?.is_admin ? 'Admin Role' : 'User Role'}
+                <span className="text-[10px] font-mono text-indigo-400 uppercase font-bold truncate">
+                  {getRoleLabel(role)}
                 </span>
               </div>
             </div>
@@ -148,7 +176,7 @@ export const MainLayout: React.FC = () => {
               onClick={handleLogout}
               title="Logout"
               aria-label="Sign out"
-              className="p-2 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition"
+              className="p-2 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -176,6 +204,22 @@ export const MainLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* System Status Operational Indicator */}
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-[11px] font-mono font-bold text-emerald-400 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Operational</span>
+            </div>
+
+            {/* ✨ AI Copilot Header Toggle Button */}
+            <button
+              onClick={() => setCopilotOpen(true)}
+              aria-label="Open AI Copilot"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/20 border border-purple-500/40 hover:bg-purple-600/30 text-purple-300 text-xs font-bold transition shadow-neo"
+            >
+              <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
+              <span className="hidden sm:inline">AI Copilot</span>
+            </button>
+
             {/* Alerts Notification Bell */}
             <button
               onClick={() => setAlertsOpen(true)}
@@ -195,7 +239,7 @@ export const MainLayout: React.FC = () => {
               <span>Tenant: {user?.organization_id?.substring(0, 8) || 'Active'}</span>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center font-bold text-xs text-indigo-300">
+            <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center font-bold text-xs text-indigo-300" title={user?.email || 'User'}>
               {user?.email?.charAt(0).toUpperCase() || 'U'}
             </div>
           </div>
@@ -213,6 +257,12 @@ export const MainLayout: React.FC = () => {
         onClose={() => setAlertsOpen(false)}
         alertsData={alertsData}
         isLoading={alertsLoading}
+      />
+
+      {/* AI Copilot Drawer */}
+      <AICopilotDrawer
+        isOpen={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
       />
 
       {/* Mobile Drawer Navigation */}
@@ -237,6 +287,17 @@ export const MainLayout: React.FC = () => {
               </Link>
             );
           })}
+
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setCopilotOpen(true);
+            }}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-purple-300 hover:bg-purple-600/20 border border-purple-500/30"
+          >
+            <Sparkles className="w-5 h-5 text-purple-400" />
+            <span>AI Copilot</span>
+          </button>
 
           <button
             onClick={handleLogout}

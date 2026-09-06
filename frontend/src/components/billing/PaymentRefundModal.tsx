@@ -60,12 +60,12 @@ export const PaymentRefundModal: React.FC<PaymentRefundModalProps> = ({
         <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>
-            Original Payment Amount: <strong>${Number(payment.amount).toFixed(2)}</strong> ({payment.payment_method})
+            Original Payment Amount: <strong>₹{Number(payment.amount).toFixed(2)}</strong> ({payment.payment_method})
           </span>
         </div>
 
         <GlassInput
-          label="Refund Amount ($) *"
+          label="Refund Amount (₹) *"
           type="number"
           step="0.01"
           max={Number(payment.amount)}

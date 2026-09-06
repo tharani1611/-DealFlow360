@@ -48,7 +48,9 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
         if (typeof data.detail === 'string') {
           message = data.detail;
         } else if (Array.isArray(data.detail)) {
-          message = data.detail.map((err: any) => err.msg || JSON.stringify(err)).join(', ');
+          message = data.detail.map((err: any) => err.msg || (typeof err === 'string' ? err : JSON.stringify(err))).join(', ');
+        } else if (typeof data.detail === 'object') {
+          message = data.detail.message || data.detail.msg || JSON.stringify(data.detail);
         }
       }
     } catch {

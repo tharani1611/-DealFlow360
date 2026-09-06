@@ -10,8 +10,9 @@ from app.schemas.negotiation import (
     ApprovalAuditLogResponse, LineCommentCreate, LineCommentResponse,
     ChangeRequestResponse, ChangeRequestReview, CounterDiscountApply, QuotationVersionResponse
 )
+from app.schemas.co_negotiator import NegotiationSimulationRequest, NegotiationSimulationResponse
 from app.schemas.quotation import QuotationResponse
-from app.services import negotiation, approval_engine
+from app.services import negotiation, approval_engine, co_negotiator
 
 router = APIRouter(prefix="/quotations", tags=["Quotation Negotiation & Approval Audit"])
 
@@ -121,3 +122,20 @@ async def list_quotation_versions(
     """Lists historical versions and snapshots for a quotation."""
     versions = await negotiation.list_quotation_versions(db, current_user.organization_id, quotation_id)
     return [QuotationVersionResponse.model_validate(v) for v in versions]
+
+
+@router.post("/{quotation_id}/simulate-counter-offer", response_model=NegotiationSimulationResponse)
+async def simulate_counter_offer(
+    quotation_id: uuid.UUID,
+    payload: NegotiationSimulationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Simulates 120+ commercial negotiation scenarios and returns optimal counter-offer recommendations."""
+    return await co_negotiator.simulate_negotiation_scenarios(
+        session=db,
+        organization_id=current_user.organization_id,
+        quotation_id=quotation_id,
+        payload=payload
+    )
+

@@ -81,7 +81,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Issue Credit Note for ${invoice.invoice_number}`}
-      subtitle={`Invoice Total: $${Number(invoice.total).toFixed(2)} | Paid: $${Number(invoice.amount_paid).toFixed(2)}`}
+      subtitle={`Invoice Total: ₹${Number(invoice.total).toFixed(2)} | Paid: ₹${Number(invoice.amount_paid).toFixed(2)}`}
       maxWidth="lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -141,7 +141,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
                 />
                 <input
                   type="number"
-                  placeholder="Unit Price ($)"
+                  placeholder="Unit Price (₹)"
                   min="0"
                   step="0.01"
                   value={item.unit_price}
@@ -168,7 +168,7 @@ export const CreditNoteModal: React.FC<CreditNoteModalProps> = ({
 
         <div className="flex justify-between items-center p-3 bg-slate-950/80 rounded-lg border border-slate-800">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Credit Amount</span>
-          <span className="text-base font-bold font-mono text-amber-400">${calculateTotal().toFixed(2)}</span>
+          <span className="text-base font-bold font-mono text-amber-400">₹{calculateTotal().toFixed(2)}</span>
         </div>
 
         <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">

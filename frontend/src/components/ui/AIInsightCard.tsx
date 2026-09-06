@@ -41,7 +41,7 @@ export const AIInsightCard: React.FC<AIInsightCardProps> = ({
           </div>
         </div>
 
-        {riskLevel && <StatusBadge status={`Risk: ${riskLevel}`} variant={riskLevel === 'high' ? 'danger' : riskLevel === 'medium' ? 'warning' : 'success'} />}
+        {riskLevel && <StatusBadge status={`Risk: ₹${riskLevel}`} variant={riskLevel === 'high' ? 'danger' : riskLevel === 'medium' ? 'warning' : 'success'} />}
       </div>
 
       <div>{children}</div>

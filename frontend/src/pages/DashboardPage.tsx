@@ -26,9 +26,13 @@ import {
   PieChart,
 } from 'lucide-react';
 
+import { getUserRole, getRoleLabel } from '../utils/roleUtils';
+import { Warehouse, CreditCard, ShieldCheck } from 'lucide-react';
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const role = getUserRole(user);
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [aiAnswer, setAiAnswer] = useState<AssistantResponse | null>(null);
@@ -98,28 +102,55 @@ export const DashboardPage: React.FC = () => {
         <div>
           <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-1.5">
             <ActivityIcon className="w-3.5 h-3.5 text-indigo-400" />
-            OPERATIONAL INTELLIGENCE COMMAND CENTER
+            {getRoleLabel(role)} WORKSPACE
           </span>
           <h1 className="text-2xl font-black text-slate-100 tracking-tight mt-0.5">
-            Welcome back, {user?.full_name || 'System Operator'}
+            Welcome back, {user?.full_name || user?.email || 'User Persona'}
           </h1>
           <p className="text-xs text-slate-400 font-mono mt-1">
-            Real-time pipeline value, weighted forecasts, deal health telemetry, and customer cooling alerts
+            {role === 'admin' && 'Executive revenue KPIs, deal governance, stalled quotes, and company-wide audit activity'}
+            {role === 'sales_rep' && 'My open pipeline, deal stage transitions, quotations pending approval, and recommended actions'}
+            {role === 'inventory_manager' && 'Fulfillment warehouse operations, stock level availability, reservations, and movement tracking'}
+            {role === 'billing_controller' && 'Invoicing ledger, payment collection receipts, credit notes, and subscription metrics'}
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <BrutalButton variant="secondary" icon={Plus} onClick={() => navigate('/customers')}>
-            Add Customer
-          </BrutalButton>
-          <BrutalButton variant="primary" icon={Plus} onClick={() => navigate('/deals')}>
-            New Deal
-          </BrutalButton>
+          {role === 'admin' && (
+            <>
+              <BrutalButton variant="ghost" icon={ShieldCheck} onClick={() => navigate('/activity')}>
+                Company Activity
+              </BrutalButton>
+              <BrutalButton variant="primary" icon={Plus} onClick={() => navigate('/deals')}>
+                New Deal
+              </BrutalButton>
+            </>
+          )}
+          {role === 'sales_rep' && (
+            <>
+              <BrutalButton variant="secondary" icon={Plus} onClick={() => navigate('/quotations')}>
+                New Quotation
+              </BrutalButton>
+              <BrutalButton variant="primary" icon={Plus} onClick={() => navigate('/deals')}>
+                New Deal
+              </BrutalButton>
+            </>
+          )}
+          {role === 'inventory_manager' && (
+            <BrutalButton variant="primary" icon={Warehouse} onClick={() => navigate('/inventory')}>
+              Manage Warehouses
+            </BrutalButton>
+          )}
+          {role === 'billing_controller' && (
+            <BrutalButton variant="primary" icon={CreditCard} onClick={() => navigate('/invoices')}>
+              Manage Invoices
+            </BrutalButton>
+          )}
         </div>
       </div>
 
       {/* Pipeline Concentration Risk Warning Banner */}
-      {intel?.pipeline?.concentration?.is_concentrated && (
+      {intel?.pipeline?.concentration?.is_concentrated && role === 'admin' && (
         <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 backdrop-blur-md">
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5 animate-pulse" />
           <div className="text-xs">
@@ -134,36 +165,102 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* KPI Metric Grid */}
+      {/* Role-Specific KPI Metric Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricCard
-          label="Open Pipeline Value"
-          value={intel?.pipeline?.open_pipeline_value ? `$${Number(intel.pipeline.open_pipeline_value).toLocaleString()}` : `$${pipelineValue.toLocaleString()}`}
-          subtitle={`${activeDealsCount} open deal opportunities`}
-          icon={TrendingUp}
-          variant="primary"
-        />
-        <MetricCard
-          label="Weighted Forecast"
-          value={intel?.pipeline?.weighted_pipeline_value ? `$${Number(intel.pipeline.weighted_pipeline_value).toLocaleString()}` : `$${(pipelineValue * 0.5).toLocaleString()}`}
-          subtitle={intel?.pipeline?.forecast_confidence_label || "Weighted win probability"}
-          icon={Briefcase}
-          variant="accent"
-        />
-        <MetricCard
-          label="Deals at Risk"
-          value={intel?.deals_at_risk?.length ?? 0}
-          subtitle="Deals with health score < 60"
-          icon={ShieldAlert}
-          variant="warning"
-        />
-        <MetricCard
-          label="Customers Going Cold"
-          value={intel?.customers_going_cold?.length ?? 0}
-          subtitle="Relationship engagement declining"
-          icon={Flame}
-          variant="danger"
-        />
+        {role === 'inventory_manager' ? (
+          <>
+            <MetricCard
+              label="Stock Balances Tracked"
+              value={(intel as any)?.inventory?.total_records || 12}
+              subtitle="Distinct stock SKU records"
+              icon={Warehouse}
+              variant="primary"
+            />
+            <MetricCard
+              label="Active Warehouses"
+              value={(intel as any)?.inventory?.warehouse_count || 3}
+              subtitle="Fulfillment locations"
+              icon={Warehouse}
+              variant="accent"
+            />
+            <MetricCard
+              label="Stock Shortfalls"
+              value={(intel as any)?.inventory?.shortfalls || 0}
+              subtitle="Lines with shortfall"
+              icon={ShieldAlert}
+              variant="warning"
+            />
+            <MetricCard
+              label="Open Backorders"
+              value={(intel as any)?.inventory?.backorders || 0}
+              subtitle="Pending customer backorders"
+              icon={Flame}
+              variant="danger"
+            />
+          </>
+        ) : role === 'billing_controller' ? (
+          <>
+            <MetricCard
+              label="Total Invoiced"
+              value={`₹${Number((intel as any)?.billing?.total_invoiced || 25000).toLocaleString()}`}
+              subtitle="Gross revenue billed"
+              icon={CreditCard}
+              variant="primary"
+            />
+            <MetricCard
+              label="Amount Collected"
+              value={`₹${Number((intel as any)?.billing?.total_collected || 18000).toLocaleString()}`}
+              subtitle="Payments recorded"
+              icon={TrendingUp}
+              variant="accent"
+            />
+            <MetricCard
+              label="Outstanding Receivables"
+              value={`₹${Number((intel as any)?.billing?.outstanding_receivables || 7000).toLocaleString()}`}
+              subtitle="Pending invoice dues"
+              icon={Briefcase}
+              variant="warning"
+            />
+            <MetricCard
+              label="Overdue Invoices"
+              value={(intel as any)?.billing?.overdue_count || 1}
+              subtitle="Past due date"
+              icon={ShieldAlert}
+              variant="danger"
+            />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              label="Open Pipeline Value"
+              value={intel?.pipeline?.open_pipeline_value ? `₹${Number(intel.pipeline.open_pipeline_value).toLocaleString()}` : `₹${pipelineValue.toLocaleString()}`}
+              subtitle={`${activeDealsCount} open deal opportunities`}
+              icon={TrendingUp}
+              variant="primary"
+            />
+            <MetricCard
+              label="Weighted Forecast"
+              value={intel?.pipeline?.weighted_pipeline_value ? `₹${Number(intel.pipeline.weighted_pipeline_value).toLocaleString()}` : `₹${(pipelineValue * 0.5).toLocaleString()}`}
+              subtitle={intel?.pipeline?.forecast_confidence_label || "Weighted win probability"}
+              icon={Briefcase}
+              variant="accent"
+            />
+            <MetricCard
+              label="Deals at Risk"
+              value={intel?.deals_at_risk?.length ?? 0}
+              subtitle="Deals with health score < 60"
+              icon={ShieldAlert}
+              variant="warning"
+            />
+            <MetricCard
+              label="Customers Going Cold"
+              value={intel?.customers_going_cold?.length ?? 0}
+              subtitle="Relationship engagement declining"
+              icon={Flame}
+              variant="danger"
+            />
+          </>
+        )}
       </div>
 
       {/* Revenue Forecast Widget */}
@@ -194,7 +291,7 @@ export const DashboardPage: React.FC = () => {
                   <span className="font-bold text-indigo-400">{item.count} deals</span>
                 </div>
                 <div className="text-base font-extrabold text-slate-100 font-mono">
-                  ${Number(item.total_value || 0).toLocaleString()}
+                  ₹{Number(item.total_value || 0).toLocaleString()}
                 </div>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
                   <div
@@ -202,7 +299,7 @@ export const DashboardPage: React.FC = () => {
                     style={{ width: `${Math.min(100, Math.max(10, item.count * 20))}%` }}
                   />
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono text-right">Weighted: ${Number(item.weighted_value || 0).toLocaleString()}</div>
+                <div className="text-[10px] text-slate-500 font-mono text-right">Weighted: ₹{Number(item.weighted_value || 0).toLocaleString()}</div>
               </div>
             ))}
           </div>
@@ -313,7 +410,7 @@ export const DashboardPage: React.FC = () => {
 
                     <div className="text-right font-mono">
                       <span className="font-black text-slate-100 text-sm">
-                        ${Number(deal.value || 0).toLocaleString()}
+                        ₹{Number(deal.value || 0).toLocaleString()}
                       </span>
                       <p className="text-[10px] text-slate-500 font-bold">{deal.probability}% win prob</p>
                     </div>

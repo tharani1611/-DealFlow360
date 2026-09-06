@@ -58,7 +58,7 @@ export const ProductIntelligenceModal: React.FC<ProductIntelligenceModalProps> =
             <div className="flex items-center gap-3 text-right">
               <div>
                 <span className="text-[10px] text-slate-400 uppercase block">Unit Selling Price</span>
-                <span className="text-base font-black text-emerald-400">${data.unit_price}</span>
+                <span className="text-base font-black text-emerald-400">₹{data.unit_price}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase block">Popularity Rank</span>
@@ -71,7 +71,7 @@ export const ProductIntelligenceModal: React.FC<ProductIntelligenceModalProps> =
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] p-4 bg-slate-950/60 rounded-xl border border-slate-800">
             <div>
               <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Revenue</span>
-              <span className="font-black text-slate-100 text-sm mt-0.5 block">${data.performance.total_revenue}</span>
+              <span className="font-black text-slate-100 text-sm mt-0.5 block">₹{data.performance.total_revenue}</span>
               <span className="text-[10px] text-slate-500 block">{data.performance.units_won} units sold</span>
             </div>
 
@@ -86,7 +86,7 @@ export const ProductIntelligenceModal: React.FC<ProductIntelligenceModalProps> =
               }`}>
                 {data.performance.margin_percentage}%
               </span>
-              <span className="text-[10px] text-slate-500 block">${data.performance.gross_margin} profit</span>
+              <span className="text-[10px] text-slate-500 block">₹{data.performance.gross_margin} profit</span>
             </div>
 
             <div>
@@ -144,7 +144,7 @@ export const ProductIntelligenceModal: React.FC<ProductIntelligenceModalProps> =
                       }`}>
                         {aff.relationship_type}
                       </span>
-                      <span className="font-bold text-emerald-400">${aff.unit_price}</span>
+                      <span className="font-bold text-emerald-400">₹{aff.unit_price}</span>
                     </div>
                   </div>
                 ))}

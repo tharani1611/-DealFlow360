@@ -42,11 +42,11 @@ export const dealApi = {
   },
 
   async transitionDealStage(id: string, stage: DealStage, lost_reason?: string): Promise<Deal> {
-    const payload: { stage: DealStage; lost_reason?: string } = { stage };
+    const payload: DealUpdate = { stage };
     if (lost_reason) payload.lost_reason = lost_reason;
 
-    return fetchApi<Deal>(`/deals/${id}/stage`, {
-      method: 'POST',
+    return fetchApi<Deal>(`/deals/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(payload),
     });
   },

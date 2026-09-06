@@ -261,7 +261,7 @@ export const SettingsPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-slate-400 mb-1">Min. Customer Pipeline Value ($)</label>
+                <label className="block text-slate-400 mb-1">Min. Customer Pipeline Value (₹)</label>
                 <input
                   type="number"
                   min={0}
@@ -346,7 +346,7 @@ export const SettingsPage: React.FC = () => {
                       <div className="text-[10px] font-mono text-indigo-400 mt-1 flex items-center gap-2">
                         <span>Eligibility triggers:</span>
                         {rule.min_customer_deal_count && <span>• Min Deals: {rule.min_customer_deal_count}</span>}
-                        {rule.min_customer_pipeline_value && <span>• Min Value: ${rule.min_customer_pipeline_value}</span>}
+                        {rule.min_customer_pipeline_value && <span>• Min Value: ₹{rule.min_customer_pipeline_value}</span>}
                       </div>
                     )}
                   </div>

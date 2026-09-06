@@ -16,6 +16,17 @@ async def lifespan(app: FastAPI):
     setup_logging()
     logger.info(f"Starting {settings.APP_NAME} backend in '{settings.APP_ENV}' environment...")
     logger.info(f"API v1 prefix mounted at: {settings.API_V1_STR}")
+    
+    # Auto-migration for GST columns
+    try:
+        from app.core.database import engine
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS hsn_sac_code VARCHAR(10) DEFAULT '8471';"))
+            await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS gst_rate NUMERIC(5,2) DEFAULT 18.00;"))
+    except Exception as e:
+        logger.warning(f"Auto-migration failed (non-critical): {e}")
+
     yield
     logger.info(f"Shutting down {settings.APP_NAME} backend gracefully...")
     await dispose_database_engine()

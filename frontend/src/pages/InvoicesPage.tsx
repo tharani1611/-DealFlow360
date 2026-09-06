@@ -5,8 +5,11 @@ import { StatusBadge } from '../components/ui/StatusBadge';
 import { Invoice, Customer } from '../types';
 import { billingApi } from '../services/billingApi';
 import { customerApi } from '../services/customerApi';
+import { gstApi, GSTTaxCalculationResponse } from '../services/gstApi';
 import { RecordPaymentModal } from '../components/billing/RecordPaymentModal';
 import { CreditNoteModal } from '../components/billing/CreditNoteModal';
+import { GstTaxBreakdownCard } from '../components/gst/GstTaxBreakdownCard';
+import { EInvoiceEWayBillModal } from '../components/gst/EInvoiceEWayBillModal';
 import {
   FileText,
   CreditCard,
@@ -14,6 +17,7 @@ import {
   CheckCircle,
   RefreshCw,
   Eye,
+  FileCode,
 } from 'lucide-react';
 
 export const InvoicesPage: React.FC = () => {
@@ -26,6 +30,39 @@ export const InvoicesPage: React.FC = () => {
   const [paymentInvoice, setPaymentInvoice] = useState<Invoice | null>(null);
   const [creditNoteInvoice, setCreditNoteInvoice] = useState<Invoice | null>(null);
   const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
+  const [complianceModalInvoice, setComplianceModalInvoice] = useState<Invoice | null>(null);
+  const [gstBreakdown, setGstBreakdown] = useState<GSTTaxCalculationResponse | null>(null);
+  const [gstLoading, setGstLoading] = useState<boolean>(false);
+
+  const handleOpenDetail = async (inv: Invoice) => {
+    setDetailInvoice(inv);
+    setGstLoading(true);
+    try {
+      const cust = customers.find((c) => c.id === inv.customer_id);
+      const buyerState = cust?.state || 'Maharashtra';
+      const itemsPayload = (inv.items || []).map((item) => ({
+        description: item.description,
+        hsn_sac_code: (item as any).hsn_sac_code || '8471',
+        quantity: Number(item.quantity),
+        unit_price: Number(item.unit_price),
+        discount_amount: Number(item.discount_amount),
+        line_subtotal: Number(item.line_subtotal),
+        gst_rate: (item as any).gst_rate || 18,
+      }));
+
+      const res = await gstApi.calculateTax({
+        seller_state: 'Karnataka',
+        buyer_state: buyerState,
+        items: itemsPayload.length > 0 ? itemsPayload : [{ description: 'General Item', quantity: 1, unit_price: Number(inv.subtotal), gst_rate: 18 }],
+      });
+      setGstBreakdown(res);
+    } catch (err) {
+      console.error('Failed to calculate GST breakdown:', err);
+      setGstBreakdown(null);
+    } finally {
+      setGstLoading(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -169,9 +206,9 @@ export const InvoicesPage: React.FC = () => {
                   <th className="py-3 px-3">Customer</th>
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3">Due Date</th>
-                  <th className="py-3 px-3">Total ($)</th>
-                  <th className="py-3 px-3">Paid ($)</th>
-                  <th className="py-3 px-3">Balance Due ($)</th>
+                  <th className="py-3 px-3">Total (₹)</th>
+                  <th className="py-3 px-3">Paid (₹)</th>
+                  <th className="py-3 px-3">Balance Due (₹)</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
@@ -185,16 +222,16 @@ export const InvoicesPage: React.FC = () => {
                       <td className="py-3 px-3 text-slate-200">{cust ? cust.name : inv.customer_id.substring(0, 8)}</td>
                       <td className="py-3 px-3 text-slate-400">{inv.invoice_date}</td>
                       <td className="py-3 px-3 text-slate-400">{inv.due_date}</td>
-                      <td className="py-3 px-3 font-bold text-slate-100">${Number(inv.total).toFixed(2)}</td>
-                      <td className="py-3 px-3 font-bold text-emerald-400">${Number(inv.amount_paid).toFixed(2)}</td>
-                      <td className="py-3 px-3 font-bold text-amber-400">${Number(inv.amount_due).toFixed(2)}</td>
+                      <td className="py-3 px-3 font-bold text-slate-100">₹{Number(inv.total).toFixed(2)}</td>
+                      <td className="py-3 px-3 font-bold text-emerald-400">₹{Number(inv.amount_paid).toFixed(2)}</td>
+                      <td className="py-3 px-3 font-bold text-amber-400">₹{Number(inv.amount_due).toFixed(2)}</td>
                       <td className="py-3 px-3">
                         <StatusBadge status={inv.status} size="sm" />
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => setDetailInvoice(inv)}
+                            onClick={() => handleOpenDetail(inv)}
                             className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded"
                             title="View Invoice Details"
                           >
@@ -307,8 +344,8 @@ export const InvoicesPage: React.FC = () => {
                         <td className="p-2 text-slate-200">{item.description}</td>
                         <td className="p-2 text-indigo-400">{item.billing_type}</td>
                         <td className="p-2 text-center">{item.quantity}</td>
-                        <td className="p-2 text-right">${Number(item.unit_price).toFixed(2)}</td>
-                        <td className="p-2 text-right font-bold text-slate-100">${Number(item.line_total).toFixed(2)}</td>
+                        <td className="p-2 text-right">₹{Number(item.unit_price).toFixed(2)}</td>
+                        <td className="p-2 text-right font-bold text-slate-100">₹{Number(item.line_total).toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -319,31 +356,55 @@ export const InvoicesPage: React.FC = () => {
             <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 text-xs space-y-1">
               <div className="flex justify-between text-slate-400">
                 <span>Subtotal:</span>
-                <span>${Number(detailInvoice.subtotal).toFixed(2)}</span>
+                <span>₹{Number(detailInvoice.subtotal).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Discount Total:</span>
-                <span>-${Number(detailInvoice.discount_total).toFixed(2)}</span>
+                <span>-₹{Number(detailInvoice.discount_total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Tax Total:</span>
-                <span>+${Number(detailInvoice.tax_total).toFixed(2)}</span>
+                <span>+₹{Number(detailInvoice.tax_total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-100 font-bold border-t border-slate-800 pt-1 text-sm">
                 <span>Grand Total:</span>
-                <span>${Number(detailInvoice.total).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-emerald-400 font-bold">
-                <span>Amount Paid:</span>
-                <span>-${Number(detailInvoice.amount_paid).toFixed(2)}</span>
+                <span>₹{Number(detailInvoice.total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-amber-400 font-bold text-sm border-t border-slate-800 pt-1">
                 <span>Remaining Balance Due:</span>
-                <span>${Number(detailInvoice.amount_due).toFixed(2)}</span>
+                <span>₹{Number(detailInvoice.amount_due).toFixed(2)}</span>
               </div>
+            </div>
+
+            <GstTaxBreakdownCard gstData={gstBreakdown} loading={gstLoading} />
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+              <button
+                onClick={() => setComplianceModalInvoice(detailInvoice)}
+                className="px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-bold flex items-center gap-2 transition"
+              >
+                <FileCode className="w-4 h-4 text-indigo-400" />
+                🇮🇳 Generate E-Invoice & E-Way Bill JSON Vault
+              </button>
+              <button
+                onClick={() => setDetailInvoice(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Compliance E-Invoice & E-Way Bill Modal */}
+      {complianceModalInvoice && (
+        <EInvoiceEWayBillModal
+          invoiceId={complianceModalInvoice.id}
+          invoiceNumber={complianceModalInvoice.invoice_number}
+          customerName={customers.find((c) => c.id === complianceModalInvoice.customer_id)?.name || 'Valued Customer'}
+          onClose={() => setComplianceModalInvoice(null)}
+        />
       )}
     </div>
   );

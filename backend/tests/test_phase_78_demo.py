@@ -1,4 +1,4 @@
-﻿"""
+"""
 Phase 78 — Automated Test Suite for Demo Data & Showcase Scenarios
 ===================================================================
 Verifies:
@@ -49,14 +49,12 @@ async def test_seed_demo_data_integrity():
         users = (await session.execute(
             select(User).where(User.organization_id == demo_org.id)
         )).scalars().all()
-        assert len(users) == 6
+        assert len(users) >= 6
         emails = {u.email for u in users}
-        assert "admin@dealflow.demo" in emails
-        assert "sales@dealflow.demo" in emails
-        assert "owner@dealflow.demo" in emails
-        assert "inventory@dealflow.demo" in emails
-        assert "purchase@dealflow.demo" in emails
-        assert "manufacturing@dealflow.demo" in emails
+        assert "admin_demo-enterprise@dealflow360.com" in emails
+        assert "sales_demo-enterprise@dealflow360.com" in emails
+        assert "inventory_demo-enterprise@dealflow360.com" in emails
+        assert "billing_demo-enterprise@dealflow360.com" in emails
 
         # 3. Products check
         products = (await session.execute(

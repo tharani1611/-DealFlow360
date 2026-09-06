@@ -268,7 +268,7 @@ export const CustomerDetailPage: React.FC = () => {
                   </div>
                   <div className="p-3 bg-black/20 rounded-xl border border-white/5">
                     <div className="text-[10px] text-slate-400 uppercase font-sans">Open Deals Value</div>
-                    <div className="text-xl font-bold text-emerald-400">${engagement.metrics.total_open_deal_value}</div>
+                    <div className="text-xl font-bold text-emerald-400">₹{engagement.metrics.total_open_deal_value}</div>
                     <div className="text-[10px] text-slate-500 mt-0.5">{engagement.metrics.open_deal_count} active opportunities</div>
                   </div>
                   <div className="p-3 bg-black/20 rounded-xl border border-white/5">
@@ -387,19 +387,19 @@ export const CustomerDetailPage: React.FC = () => {
                 <div className="space-y-2 text-xs font-mono">
                   <div className="flex justify-between py-1.5 border-b border-slate-800">
                     <span className="text-slate-400">Open Pipeline:</span>
-                    <span className="font-bold text-slate-100">${Number(custForecast.open_pipeline).toLocaleString()}</span>
+                    <span className="font-bold text-slate-100">₹{Number(custForecast.open_pipeline).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-800">
                     <span className="text-slate-400">Forecast Revenue:</span>
-                    <span className="font-extrabold text-emerald-400">${Number(custForecast.forecast_revenue).toLocaleString()}</span>
+                    <span className="font-extrabold text-emerald-400">₹{Number(custForecast.forecast_revenue).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-slate-800">
                     <span className="text-slate-400">Committed:</span>
-                    <span className="font-bold text-cyan-300">${Number(custForecast.committed_revenue).toLocaleString()}</span>
+                    <span className="font-bold text-cyan-300">₹{Number(custForecast.committed_revenue).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-slate-400">At Risk:</span>
-                    <span className="font-bold text-rose-400">${Number(custForecast.at_risk_revenue).toLocaleString()}</span>
+                    <span className="font-bold text-rose-400">₹{Number(custForecast.at_risk_revenue).toLocaleString()}</span>
                   </div>
                 </div>
               </GlassCard>
@@ -433,7 +433,7 @@ export const CustomerDetailPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="font-mono font-bold text-emerald-400">
-                    ${Number(q.total_amount || 0).toLocaleString()}
+                    ₹{Number(q.total_amount || 0).toLocaleString()}
                   </div>
                 </div>
               ))}
@@ -462,7 +462,7 @@ export const CustomerDetailPage: React.FC = () => {
                     <span className="text-[10px] text-slate-500 font-mono">{d.deal_number}</span>
                   </div>
                   <div className="font-mono font-bold text-slate-100">
-                    ${Number(d.value || 0).toLocaleString()}
+                    ₹{Number(d.value || 0).toLocaleString()}
                   </div>
                 </div>
               ))}

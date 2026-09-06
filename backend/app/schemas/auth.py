@@ -37,19 +37,22 @@ class UserResponse(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    """Registration payload for creating a new Organization and its primary admin User."""
-    organization_name: str = Field(..., min_length=1, max_length=255, description="Full legal or commercial organization name")
+    """Registration payload for creating or joining an Organization with a selected role."""
+    organization_name: Optional[str] = Field(None, max_length=255, description="Full legal or commercial organization name")
     organization_slug: str = Field(..., min_length=2, max_length=255, description="Unique URL-friendly organization slug")
-    email: str = Field(..., min_length=3, max_length=255, description="Administrator email address")
-    full_name: Optional[str] = Field(None, max_length=255, description="Administrator full name")
+    email: str = Field(..., min_length=3, max_length=255, description="User email address")
+    full_name: Optional[str] = Field(None, max_length=255, description="User full name")
     password: str = Field(..., min_length=8, max_length=72, description="Password (min 8 chars, max 72 bytes)")
+    role: Optional[str] = Field(None, description="Requested user role ('Admin', 'Sales Representative', 'Inventory Manager', 'Billing Controller')")
 
     @field_validator("organization_name")
     @classmethod
-    def validate_name(cls, v: str) -> str:
+    def validate_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
         stripped = v.strip()
         if not stripped:
-            raise ValueError("Organization name cannot be empty or whitespace only")
+            return None
         return stripped
 
     @field_validator("organization_slug")

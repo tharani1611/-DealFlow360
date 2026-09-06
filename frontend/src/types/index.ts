@@ -105,6 +105,7 @@ export interface Product {
   description: string | null;
   unit_price: string;
   currency: string;
+  image_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -116,6 +117,7 @@ export interface ProductCreate {
   description?: string | null;
   unit_price: number | string;
   currency?: string;
+  image_url?: string | null;
   is_active?: boolean;
 }
 
@@ -125,6 +127,7 @@ export interface ProductUpdate {
   description?: string | null;
   unit_price?: number | string;
   currency?: string;
+  image_url?: string | null;
   is_active?: boolean;
 }
 
@@ -1988,6 +1991,38 @@ export interface ExecutiveAnalyticsResponse {
   };
   generated_at: string;
 }
+
+// --- Co-Negotiator Simulation Types ---
+export interface NegotiationSimulationRequest {
+  requested_discount_percent?: number;
+  target_win_probability?: number;
+}
+
+export interface SimulationScenario {
+  scenario_id: string;
+  title: string;
+  strategy_type: 'BALANCED' | 'VOLUME_INCENTIVE' | 'VALUE_ADD_SWAP';
+  recommended_discount_percent: string;
+  recommended_volume_commitment: number;
+  offered_perks: string[];
+  simulated_win_probability: number;
+  projected_gross_revenue: string;
+  projected_gross_margin_percent: string;
+  projected_net_profit: string;
+  risk_assessment: 'LOW_RISK' | 'MODERATE_RISK' | 'HIGH_RISK';
+  reasoning_summary: string;
+  counter_proposal_script: string;
+}
+
+export interface NegotiationSimulationResponse {
+  quotation_id: string;
+  quotation_number: string;
+  original_total: string;
+  original_margin_percent: string;
+  simulated_scenarios_count: number;
+  recommended_scenarios: SimulationScenario[];
+}
+
 
 
 

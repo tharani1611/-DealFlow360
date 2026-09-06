@@ -27,6 +27,7 @@ import { useToast } from '../context/ToastContext';
 import { ApprovalAuditTimeline } from '../components/approvals/ApprovalAuditTimeline';
 import { LineCommentsModal } from '../components/negotiation/LineCommentsModal';
 import { ChangeRequestModal } from '../components/negotiation/ChangeRequestModal';
+import { CoNegotiatorSimulatorModal } from '../components/negotiation/CoNegotiatorSimulatorModal';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -39,6 +40,7 @@ import {
   Zap,
   Clock,
   ShieldCheck,
+  Bot,
   MessageSquare,
   Edit3,
   PackageCheck,
@@ -60,6 +62,7 @@ export const QuotationDetailPage: React.FC = () => {
   // Negotiation modals
   const [selectedItemForComments, setSelectedItemForComments] = useState<{ id: string; name: string } | null>(null);
   const [showCounterDiscountModal, setShowCounterDiscountModal] = useState<boolean>(false);
+  const [showCoNegotiatorModal, setShowCoNegotiatorModal] = useState<boolean>(false);
 
   // Transition modal state
   const [isTransitionModalOpen, setIsTransitionModalOpen] = useState(false);
@@ -175,6 +178,15 @@ export const QuotationDetailPage: React.FC = () => {
 
     return (
       <div className="flex items-center gap-2 flex-wrap">
+        <BrutalButton
+          variant="secondary"
+          size="sm"
+          icon={Bot}
+          onClick={() => setShowCoNegotiatorModal(true)}
+          className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40"
+        >
+          AI Co-Negotiator
+        </BrutalButton>
         <BrutalButton
           variant="secondary"
           size="sm"
@@ -423,7 +435,7 @@ export const QuotationDetailPage: React.FC = () => {
       )}
 
       {/* Hybrid Commercial Billing Summary (Phase 45) */}
-      <HybridBillingSummaryCard billing={hybridBilling} currency={quotation.currency || 'USD'} />
+      <HybridBillingSummaryCard billing={hybridBilling} currency={quotation.currency || 'INR'} />
 
       {/* Commercial Governance Intelligence Card (Phases 23–25) */}
       {governanceSummary && (
@@ -559,10 +571,10 @@ export const QuotationDetailPage: React.FC = () => {
                       {item.sku && <span className="font-mono text-[10px] text-slate-500 block">SKU: {item.sku}</span>}
                     </td>
                     <td className="text-right font-mono text-xs">{Number(item.quantity).toLocaleString()}</td>
-                    <td className="text-right font-mono text-xs">${Number(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="text-right font-mono text-xs">₹{Number(item.unit_price).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="text-right font-mono text-xs text-slate-400">{Number(item.discount_percent || 0).toFixed(1)}%</td>
                     <td className="text-right font-mono text-xs text-slate-400">{Number(item.tax_rate || 0).toFixed(1)}%</td>
-                    <td className="text-right font-mono text-xs font-bold text-slate-100">${Number(item.line_total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="text-right font-mono text-xs font-bold text-slate-100">₹{Number(item.line_total).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="text-center">
                       <button
                         onClick={() => setSelectedItemForComments({ id: item.id, name: item.product_name })}
@@ -639,6 +651,21 @@ export const QuotationDetailPage: React.FC = () => {
           quotationId={quotation.id}
           isPortal={false}
           onClose={() => setShowCounterDiscountModal(false)}
+          onSuccess={() => loadQuotationData()}
+        />
+      )}
+
+      {/* AI Co-Negotiator Simulator Modal */}
+      {showCoNegotiatorModal && (
+        <CoNegotiatorSimulatorModal
+          quotationId={quotation.id}
+          quotationNumber={quotation.quotation_number}
+          initialDiscountPercent={
+            parseFloat(quotation.discount_amount || '0') > 0 && parseFloat(quotation.subtotal || '0') > 0
+              ? (parseFloat(quotation.discount_amount) / parseFloat(quotation.subtotal)) * 100
+              : 12.0
+          }
+          onClose={() => setShowCoNegotiatorModal(false)}
           onSuccess={() => loadQuotationData()}
         />
       )}

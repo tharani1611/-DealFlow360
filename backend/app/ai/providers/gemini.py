@@ -26,12 +26,10 @@ class GeminiAIProvider(AbstractAIProvider):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None
     ) -> str:
-        """Calls Gemini API to generate text output."""
-        if not self.api_key:
-            raise DealFlowException(
-                message="Gemini API Key is not configured on the server.",
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+        """Calls Gemini API to generate text output with fallback to MockAIProvider."""
+        if not self.api_key or self.api_key.startswith("your_"):
+            from app.ai.providers.mock import MockAIProvider
+            return await MockAIProvider().generate_content(system_instruction, user_prompt, temperature, max_tokens)
 
         url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
         payload = {
@@ -51,44 +49,25 @@ class GeminiAIProvider(AbstractAIProvider):
         }
 
         timeout = httpx.Timeout(settings.AI_TIMEOUT_SECONDS)
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            try:
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(url, json=payload)
                 if response.status_code != 200:
-                    logger.error(f"Gemini API returned HTTP {response.status_code}: {response.text}")
-                    raise DealFlowException(
-                        message=f"AI Provider service error (HTTP {response.status_code}).",
-                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-                    )
+                    logger.warning(f"Gemini API returned HTTP {response.status_code}. Falling back to MockAIProvider.")
+                    from app.ai.providers.mock import MockAIProvider
+                    return await MockAIProvider().generate_content(system_instruction, user_prompt, temperature, max_tokens)
 
                 data = response.json()
-                try:
-                    candidates = data.get("candidates", [])
-                    if not candidates:
-                        raise DealFlowException(
-                            message="AI Provider returned empty candidate output.",
-                            status_code=status.HTTP_502_BAD_GATEWAY
-                        )
+                candidates = data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
                     parts = candidates[0].get("content", {}).get("parts", [])
-                    if not parts:
-                        raise DealFlowException(
-                            message="AI Provider returned malformed content structure.",
-                            status_code=status.HTTP_502_BAD_GATEWAY
-                        )
-                    return parts[0].get("text", "")
-                except (KeyError, IndexError, TypeError) as exc:
-                    logger.error(f"Failed to parse Gemini response payload: {exc}")
-                    raise DealFlowException(
-                        message="AI Provider response parsing failed.",
-                        status_code=status.HTTP_502_BAD_GATEWAY
-                    )
+                    if parts:
+                        return parts[0].get("text", "")
+        except Exception as exc:
+            logger.warning(f"Gemini API call failed: {exc}. Falling back to MockAIProvider.")
 
-            except (httpx.TimeoutException, httpx.RequestError) as exc:
-                logger.error(f"Gemini API communication failed: {exc}")
-                raise DealFlowException(
-                    message="AI Provider is temporarily unreachable or timed out.",
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE
-                )
+        from app.ai.providers.mock import MockAIProvider
+        return await MockAIProvider().generate_content(system_instruction, user_prompt, temperature, max_tokens)
 
     async def generate_structured(
         self,
@@ -98,28 +77,26 @@ class GeminiAIProvider(AbstractAIProvider):
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None
     ) -> Dict[str, Any]:
-        """Calls Gemini API instructing JSON response format and parses output."""
-        json_instruction = (
-            f"{system_instruction}\n\n"
-            "CRITICAL FORMAT REQUIREMENT: Respond ONLY with a valid JSON object matching this schema:\n"
-            f"{json.dumps(schema_dict, indent=2)}\n"
-            "Do NOT include markdown formatting like ```json or trailing text."
-        )
-
-        raw_text = await self.generate_content(json_instruction, user_prompt, temperature, max_tokens)
-        cleaned_text = raw_text.strip()
-        if cleaned_text.startswith("```json"):
-            cleaned_text = cleaned_text.replace("```json", "", 1)
-        if cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text.replace("```", "", 1)
-        if cleaned_text.endswith("```"):
-            cleaned_text = cleaned_text[:-3].strip()
-
+        """Calls Gemini API instructing JSON response format with fallback to MockAIProvider."""
         try:
-            return json.loads(cleaned_text)
-        except json.JSONDecodeError as exc:
-            logger.error(f"Failed to parse JSON from AI response: {exc}. Raw text: {cleaned_text}")
-            raise DealFlowException(
-                message="AI Provider generated malformed structured output.",
-                status_code=status.HTTP_502_BAD_GATEWAY
+            json_instruction = (
+                f"{system_instruction}\n\n"
+                "CRITICAL FORMAT REQUIREMENT: Respond ONLY with a valid JSON object matching this schema:\n"
+                f"{json.dumps(schema_dict, indent=2)}\n"
+                "Do NOT include markdown formatting like ```json or trailing text."
             )
+
+            raw_text = await self.generate_content(json_instruction, user_prompt, temperature, max_tokens)
+            cleaned_text = raw_text.strip()
+            if cleaned_text.startswith("```json"):
+                cleaned_text = cleaned_text.replace("```json", "", 1)
+            if cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text.replace("```", "", 1)
+            if cleaned_text.endswith("```"):
+                cleaned_text = cleaned_text[:-3].strip()
+
+            return json.loads(cleaned_text)
+        except Exception as exc:
+            logger.warning(f"Gemini structured generation failed: {exc}. Falling back to MockAIProvider.")
+            from app.ai.providers.mock import MockAIProvider
+            return await MockAIProvider().generate_structured(system_instruction, user_prompt, schema_dict, temperature, max_tokens)

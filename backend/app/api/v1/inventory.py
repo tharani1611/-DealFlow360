@@ -12,6 +12,7 @@ from app.schemas.inventory import (
     ProductVariantResponse,
     StockReceiptRequest,
     InventoryStockResponse,
+    InventoryMovementResponse,
     QuotationAvailabilitySummary,
 )
 from app.services import inventory as inventory_service
@@ -65,6 +66,17 @@ async def list_inventory_stocks(
     current_user: User = Depends(get_current_user),
 ):
     return await inventory_service.get_inventory_stocks(db, current_user.organization_id, warehouse_id, product_id)
+
+
+@router.get("/movements", response_model=List[InventoryMovementResponse])
+async def list_inventory_movements(
+    warehouse_id: Optional[UUID] = Query(None),
+    product_id: Optional[UUID] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await inventory_service.get_inventory_movements(db, current_user.organization_id, warehouse_id, product_id)
+
 
 
 @router.get("/availability/quotations/{quotation_id}", response_model=QuotationAvailabilitySummary)

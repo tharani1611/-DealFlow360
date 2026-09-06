@@ -134,3 +134,46 @@ async def submit_approval_decision(
         created_at=rec.created_at,
         updated_at=rec.updated_at
     )
+
+
+@router.get(
+    "/inbox",
+    response_model=List[QuotationApprovalResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List Approval Inbox",
+    description="Retrieves pending/historical approval requests for the organization."
+)
+async def list_approval_inbox(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> List[QuotationApprovalResponse]:
+    items = await approval_service.list_all_quotation_approvals(
+        db, current_user.organization_id, status_filter=status_filter, skip=skip, limit=limit
+    )
+    res = []
+    for rec in items:
+        req_name = rec.requested_by_user.full_name or rec.requested_by_user.email if rec.requested_by_user else None
+        appr_name = rec.approved_by_user.full_name or rec.approved_by_user.email if rec.approved_by_user else None
+        res.append(
+            QuotationApprovalResponse(
+                id=rec.id,
+                organization_id=rec.organization_id,
+                quotation_id=rec.quotation_id,
+                approval_rule_id=rec.approval_rule_id,
+                requested_by_user_id=rec.requested_by_user_id,
+                requested_by_user_name=req_name,
+                approved_by_user_id=rec.approved_by_user_id,
+                approved_by_user_name=appr_name,
+                status=rec.status,
+                approval_level=rec.approval_level,
+                reasons=rec.reasons,
+                decision_note=rec.decision_note,
+                created_at=rec.created_at,
+                updated_at=rec.updated_at
+            )
+        )
+    return res
+

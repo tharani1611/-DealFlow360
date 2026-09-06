@@ -161,15 +161,15 @@ export const CommercialGovernancePage: React.FC = () => {
     },
     {
       header: 'Max Discount %',
-      render: (p) => <span className="font-mono text-xs font-bold text-amber-400">{p.max_discount_percent ? `${p.max_discount_percent}%` : '—'}</span>,
+      render: (p) => <span className="font-mono text-xs font-bold text-amber-400">{p.max_discount_percent ? `₹${p.max_discount_percent}%` : '—'}</span>,
     },
     {
       header: 'Min Unit Price',
-      render: (p) => <span className="font-mono text-xs font-bold text-emerald-400">{p.minimum_unit_price ? `$${p.minimum_unit_price}` : '—'}</span>,
+      render: (p) => <span className="font-mono text-xs font-bold text-emerald-400">{p.minimum_unit_price ? `₹${p.minimum_unit_price}` : '—'}</span>,
     },
     {
       header: 'Min Margin %',
-      render: (p) => <span className="font-mono text-xs font-bold text-indigo-400">{p.minimum_margin_percent ? `${p.minimum_margin_percent}%` : '—'}</span>,
+      render: (p) => <span className="font-mono text-xs font-bold text-indigo-400">{p.minimum_margin_percent ? `₹${p.minimum_margin_percent}%` : '—'}</span>,
     },
     {
       header: 'Status',
@@ -364,7 +364,7 @@ export const CommercialGovernancePage: React.FC = () => {
             />
 
             <GlassInput
-              label="Min Unit Price ($)"
+              label="Min Unit Price (₹)"
               type="number"
               step="0.01"
               min="0"

@@ -32,15 +32,14 @@ class AIService:
         """Returns configured AI provider instance or mock override."""
         if not settings.AI_ENABLED:
             raise DealFlowException(
-                message="AI Intelligence features are currently disabled on the server.",
+                message="AI features are currently disabled on the server.",
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-
         if self._provider_override:
             return self._provider_override
 
         provider_name = (settings.AI_PROVIDER or "gemini").lower()
-        if provider_name == "mock":
+        if provider_name == "mock" or not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY.startswith("your_"):
             return MockAIProvider()
         return GeminiAIProvider()
 

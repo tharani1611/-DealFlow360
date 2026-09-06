@@ -18,12 +18,16 @@ import { inventoryApi } from '../services/inventoryApi';
 import { productApi } from '../services/productApi';
 import { Warehouse as WarehouseIcon, PackageCheck, RefreshCw, Plus, ArrowDownRight } from 'lucide-react';
 
+import { useToast } from '../context/ToastContext';
+
 export const InventoryPage: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<string>('stocks');
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [stocks, setStocks] = useState<InventoryStock[]>([]);
   const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Modals state
   const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState<boolean>(false);
@@ -43,20 +47,25 @@ export const InventoryPage: React.FC = () => {
   const loadData = async () => {
     try {
       const [whList, stockList, moveList, prodList] = await Promise.all([
-        inventoryApi.getWarehouses(),
-        inventoryApi.getStocks(),
-        inventoryApi.getMovements(),
-        productApi.getProducts(),
+        inventoryApi.getWarehouses().catch(() => []),
+        inventoryApi.getStocks().catch(() => []),
+        inventoryApi.getMovements().catch(() => []),
+        productApi.getProducts().catch(() => []),
       ]);
       setWarehouses(whList);
       setStocks(stockList);
       setMovements(moveList);
       setProducts(prodList);
 
-      if (whList.length > 0) setReceiptWarehouseId(whList[0].id);
-      if (prodList.length > 0) setReceiptProductId(prodList[0].id);
+      if (whList.length > 0) {
+        setReceiptWarehouseId((prev) => prev || whList[0].id);
+      }
+      if (prodList.length > 0) {
+        setReceiptProductId((prev) => prev || prodList[0].id);
+      }
     } catch (err: any) {
       console.error('Failed to load inventory data:', err);
+      showToast(err.message || 'Failed to load inventory data.', 'error');
     }
   };
 
@@ -68,6 +77,7 @@ export const InventoryPage: React.FC = () => {
     e.preventDefault();
     if (!newWhCode || !newWhName) return;
 
+    setIsSubmitting(true);
     try {
       const payload: WarehouseCreate = {
         code: newWhCode.toUpperCase(),
@@ -75,14 +85,21 @@ export const InventoryPage: React.FC = () => {
         address: newWhAddress || undefined,
         priority: newWhPriority,
       };
-      await inventoryApi.createWarehouse(payload);
+      const createdWh = await inventoryApi.createWarehouse(payload);
+      showToast(`Warehouse '${payload.name}' created successfully!`, 'success');
       setNewWhCode('');
       setNewWhName('');
       setNewWhAddress('');
       setIsWarehouseModalOpen(false);
+      if (createdWh?.id) {
+        setReceiptWarehouseId((prev) => prev || createdWh.id);
+      }
       await loadData();
     } catch (err: any) {
       console.error('Failed to create warehouse:', err);
+      showToast(err.message || 'Failed to create warehouse.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -90,6 +107,7 @@ export const InventoryPage: React.FC = () => {
     e.preventDefault();
     if (!receiptWarehouseId || !receiptProductId || receiptQty <= 0) return;
 
+    setIsSubmitting(true);
     try {
       const payload: StockReceiptRequest = {
         warehouse_id: receiptWarehouseId,
@@ -98,12 +116,16 @@ export const InventoryPage: React.FC = () => {
         notes: receiptNotes || undefined,
       };
       await inventoryApi.recordStockReceipt(payload);
+      showToast('Stock receipt recorded successfully!', 'success');
       setReceiptQty(10);
       setReceiptNotes('');
       setIsReceiptModalOpen(false);
       await loadData();
     } catch (err: any) {
       console.error('Failed to record stock receipt:', err);
+      showToast(err.message || 'Failed to record stock receipt.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -282,7 +304,7 @@ export const InventoryPage: React.FC = () => {
             <NeoGlassButton type="button" variant="default" onClick={() => setIsWarehouseModalOpen(false)}>
               Cancel
             </NeoGlassButton>
-            <NeoGlassButton type="submit" variant="primary">
+            <NeoGlassButton type="submit" variant="primary" disabled={isSubmitting}>
               Create Warehouse
             </NeoGlassButton>
           </div>
@@ -311,7 +333,7 @@ export const InventoryPage: React.FC = () => {
             <NeoGlassButton type="button" variant="default" onClick={() => setIsReceiptModalOpen(false)}>
               Cancel
             </NeoGlassButton>
-            <NeoGlassButton type="submit" variant="primary">
+            <NeoGlassButton type="submit" variant="primary" disabled={isSubmitting}>
               Record Stock Arrival
             </NeoGlassButton>
           </div>

@@ -34,7 +34,7 @@ export const inventoryApi = {
 
   // Stock Receipts & Balance
   async recordStockReceipt(payload: StockReceiptRequest): Promise<InventoryStock> {
-    return fetchApi<InventoryStock>('/inventory/receipts', {
+    return fetchApi<InventoryStock>('/inventory/stocks/receipt', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -58,21 +58,21 @@ export const inventoryApi = {
 
   // Availability & Reservations
   async getQuotationAvailability(quotationId: string): Promise<QuotationAvailabilitySummary> {
-    return fetchApi<QuotationAvailabilitySummary>(`/inventory/availability/quotation/${quotationId}`);
+    return fetchApi<QuotationAvailabilitySummary>(`/inventory/availability/quotations/${quotationId}`);
   },
 
   async reserveStockForQuotation(quotationId: string): Promise<InventoryReservation[]> {
-    return fetchApi<InventoryReservation[]>(`/inventory/reservations/quotation/${quotationId}`, {
+    return fetchApi<InventoryReservation[]>(`/inventory/reservations/quotations/${quotationId}`, {
       method: 'POST',
     });
   },
 
   async getQuotationReservations(quotationId: string): Promise<InventoryReservation[]> {
-    return fetchApi<InventoryReservation[]>(`/inventory/reservations/quotation/${quotationId}`);
+    return fetchApi<InventoryReservation[]>(`/inventory/reservations/quotations/${quotationId}`);
   },
 
-  async releaseReservation(reservationId: string): Promise<InventoryReservation> {
-    return fetchApi<InventoryReservation>(`/inventory/reservations/${reservationId}/release`, {
+  async releaseReservation(quotationId: string): Promise<{ message: string; released_count: number }> {
+    return fetchApi<{ message: string; released_count: number }>(`/inventory/reservations/quotations/${quotationId}/release`, {
       method: 'POST',
     });
   },

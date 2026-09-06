@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from app.api.v1 import (
-    health, auth, customers, contacts, products, quotations, deals, activities, ai, intelligence, product_recommendation_rules, pricing, margins, discount_governance, discount_risk, approvals, copilot, automations, portal_auth, portal_quotations, negotiation, inventory, fulfillment, shipments, backorders, delivery, billing, invoices, payments, subscriptions, credit_notes
+    health, auth, customers, contacts, products, quotations, deals, activities, ai, intelligence, product_recommendation_rules, pricing, margins, discount_governance, discount_risk, approvals, copilot, automations, portal_auth, portal_quotations, negotiation, inventory, fulfillment, shipments, backorders, delivery, billing, invoices, payments, subscriptions, credit_notes, gst_tax
 )
 
 api_router = APIRouter()
@@ -42,6 +42,7 @@ api_router.include_router(invoices.router, prefix="/invoices", tags=["Invoice En
 api_router.include_router(payments.router, prefix="/payments", tags=["Payment Operations"])
 api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["Subscription Lifecycle"])
 api_router.include_router(credit_notes.router, prefix="/credit-notes", tags=["Credit Notes & Refunds"])
+api_router.include_router(gst_tax.router, tags=["GST Tax & Regulatory Compliance"])
 
 # Register Portal & Negotiation routers
 api_router.include_router(portal_auth.router)

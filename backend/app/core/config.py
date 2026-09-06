@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "dealflow_user"
-    POSTGRES_PASSWORD: str = "dealflow_password"
+    POSTGRES_PASSWORD: str = "DealFlow123!"
     POSTGRES_DB: str = "dealflow360"
-    DATABASE_URL: str = "postgresql+asyncpg://dealflow_user:dealflow_password@localhost:5432/dealflow360"
+    DATABASE_URL: str = "postgresql+asyncpg://dealflow_user:DealFlow123!@localhost:5432/dealflow360"
 
     # JWT Security Configuration
     JWT_SECRET_KEY: Optional[str] = None

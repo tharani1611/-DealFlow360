@@ -243,7 +243,7 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
                       >
                         {products.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} (${Number(p.unit_price).toFixed(2)})
+                            {p.name} (₹{Number(p.unit_price).toFixed(2)})
                           </option>
                         ))}
                       </select>
@@ -261,7 +261,7 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
                     </div>
 
                     <div className="col-span-2">
-                      <label className="text-[10px] text-slate-400 block mb-1">Unit Price ($)</label>
+                      <label className="text-[10px] text-slate-400 block mb-1">Unit Price (₹)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -324,15 +324,15 @@ export const QuotationBuilderModal: React.FC<QuotationBuilderModalProps> = ({
             <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/30 grid grid-cols-3 gap-4 text-xs font-mono">
               <div>
                 <div className="text-slate-400 text-[10px] uppercase">Subtotal</div>
-                <div className="text-lg font-bold text-white">${subtotal.toFixed(2)}</div>
+                <div className="text-lg font-bold text-white">₹{subtotal.toFixed(2)}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-[10px] uppercase">Total Discount</div>
-                <div className="text-lg font-bold text-amber-300">-${totalDiscount.toFixed(2)} ({blendedDiscountPercent.toFixed(1)}%)</div>
+                <div className="text-lg font-bold text-amber-300">-₹{totalDiscount.toFixed(2)} ({blendedDiscountPercent.toFixed(1)}%)</div>
               </div>
               <div>
                 <div className="text-slate-400 text-[10px] uppercase">Total Amount</div>
-                <div className="text-xl font-black text-emerald-400">${totalAmount.toFixed(2)}</div>
+                <div className="text-xl font-black text-emerald-400">₹{totalAmount.toFixed(2)}</div>
               </div>
             </div>
 

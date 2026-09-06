@@ -241,7 +241,7 @@ export const DealDetailPage: React.FC = () => {
           <div className="flex items-center gap-6 flex-wrap font-mono">
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Deal Value</span>
-              <span className="text-2xl font-black text-emerald-400">${Number(deal.value || 0).toLocaleString()}</span>
+              <span className="text-2xl font-black text-emerald-400">₹{Number(deal.value || 0).toLocaleString()}</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Win Probability</span>
@@ -395,7 +395,7 @@ export const DealDetailPage: React.FC = () => {
                 </div>
                 <div className="flex justify-between py-1 border-b border-slate-800">
                   <span className="text-slate-400">Forecast Value:</span>
-                  <span className="font-extrabold text-emerald-400">${Number(forecastItem.forecast_value).toLocaleString()}</span>
+                  <span className="font-extrabold text-emerald-400">₹{Number(forecastItem.forecast_value).toLocaleString()}</span>
                 </div>
                 <div className="pt-2 text-[11px]">
                   <span className="text-slate-400 block mb-1">Forecast Driver Rationale:</span>

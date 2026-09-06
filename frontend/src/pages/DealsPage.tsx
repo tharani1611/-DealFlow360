@@ -125,7 +125,7 @@ export const DealsPage: React.FC = () => {
       header: 'Value',
       render: (r) => (
         <span className="font-mono font-black text-slate-100 text-sm">
-          ${Number(r.value || 0).toLocaleString()}
+          ₹{Number(r.value || 0).toLocaleString()}
         </span>
       ),
     },
@@ -227,7 +227,7 @@ export const DealsPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <GlassInput
-              label="Deal Value ($)"
+              label="Deal Value (₹)"
               type="number"
               placeholder="50000"
               value={value}

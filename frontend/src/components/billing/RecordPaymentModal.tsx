@@ -50,7 +50,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Record Payment for ${invoice.invoice_number}`}
-      subtitle={`Remaining Balance Due: $${Number(invoice.amount_due).toFixed(2)}`}
+      subtitle={`Remaining Balance Due: ₹${Number(invoice.amount_due).toFixed(2)}`}
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +62,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Payment Amount (USD)
+            Payment Amount (INR)
           </label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">

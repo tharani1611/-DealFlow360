@@ -124,7 +124,7 @@ export const ForecastPage: React.FC = () => {
                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
             }`}
           >
-            Conservative (${Number(forecast.scenarios.conservative_revenue).toLocaleString()})
+            Conservative (₹{Number(forecast.scenarios.conservative_revenue).toLocaleString()})
           </button>
 
           <button
@@ -135,7 +135,7 @@ export const ForecastPage: React.FC = () => {
                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
             }`}
           >
-            Base Model (${Number(forecast.forecast_revenue).toLocaleString()})
+            Base Model (₹{Number(forecast.forecast_revenue).toLocaleString()})
           </button>
 
           <button
@@ -146,7 +146,7 @@ export const ForecastPage: React.FC = () => {
                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
             }`}
           >
-            Optimistic (${Number(forecast.scenarios.optimistic_revenue).toLocaleString()})
+            Optimistic (₹{Number(forecast.scenarios.optimistic_revenue).toLocaleString()})
           </button>
         </div>
       </div>
@@ -158,7 +158,7 @@ export const ForecastPage: React.FC = () => {
             {selectedScenario.toUpperCase()} FORECAST REVENUE
           </span>
           <span className="text-2xl font-black text-emerald-400 block mt-1">
-            ${Number(activeScenarioRevenue).toLocaleString()}
+            ₹{Number(activeScenarioRevenue).toLocaleString()}
           </span>
           <span className="text-[10px] text-slate-500 block mt-1">
             {selectedScenario === 'conservative'
@@ -191,7 +191,7 @@ export const ForecastPage: React.FC = () => {
         <GlassCard className="p-5 border-l-4 border-l-rose-500 bg-rose-950/10">
           <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">At-Risk Revenue</span>
           <span className="text-2xl font-bold text-rose-400 block mt-1">
-            ${Number(forecast.at_risk_revenue).toLocaleString()}
+            ₹{Number(forecast.at_risk_revenue).toLocaleString()}
           </span>
           <span className="text-[10px] text-slate-500 block mt-1">Requires Sales Intervention</span>
         </GlassCard>
@@ -202,19 +202,19 @@ export const ForecastPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 font-mono text-center mb-4">
           <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
             <span className="text-[10px] text-slate-400 uppercase font-sans block">Open Pipeline</span>
-            <span className="text-lg font-bold text-slate-200">${Number(forecast.open_pipeline).toLocaleString()}</span>
+            <span className="text-lg font-bold text-slate-200">₹{Number(forecast.open_pipeline).toLocaleString()}</span>
           </div>
           <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800">
             <span className="text-[10px] text-slate-400 uppercase font-sans block">Weighted Pipeline</span>
-            <span className="text-lg font-bold text-sky-400">${Number(forecast.weighted_pipeline).toLocaleString()}</span>
+            <span className="text-lg font-bold text-sky-400">₹{Number(forecast.weighted_pipeline).toLocaleString()}</span>
           </div>
           <div className="p-3 rounded-xl bg-slate-950/80 border border-emerald-500/30">
             <span className="text-[10px] text-slate-400 uppercase font-sans block">Committed Revenue</span>
-            <span className="text-lg font-bold text-cyan-300">${Number(forecast.committed_revenue).toLocaleString()}</span>
+            <span className="text-lg font-bold text-cyan-300">₹{Number(forecast.committed_revenue).toLocaleString()}</span>
           </div>
           <div className="p-3 rounded-xl bg-slate-950/80 border border-indigo-500/30">
             <span className="text-[10px] text-slate-400 uppercase font-sans block">Won Revenue</span>
-            <span className="text-lg font-bold text-indigo-300">${Number(forecast.won_revenue).toLocaleString()}</span>
+            <span className="text-lg font-bold text-indigo-300">₹{Number(forecast.won_revenue).toLocaleString()}</span>
           </div>
         </div>
 
@@ -253,15 +253,15 @@ export const ForecastPage: React.FC = () => {
               <div className="space-y-1 pt-2 border-t border-slate-800 text-[11px]">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Forecast:</span>
-                  <span className="font-bold text-emerald-400">${Number(p.forecast_revenue).toLocaleString()}</span>
+                  <span className="font-bold text-emerald-400">₹{Number(p.forecast_revenue).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Committed:</span>
-                  <span className="text-cyan-300">${Number(p.committed_revenue).toLocaleString()}</span>
+                  <span className="text-cyan-300">₹{Number(p.committed_revenue).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">At Risk:</span>
-                  <span className="text-rose-400">${Number(p.at_risk_revenue).toLocaleString()}</span>
+                  <span className="text-rose-400">₹{Number(p.at_risk_revenue).toLocaleString()}</span>
                 </div>
               </div>
             </div>

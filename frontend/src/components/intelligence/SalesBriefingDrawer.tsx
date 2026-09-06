@@ -83,7 +83,7 @@ export const SalesBriefingDrawer: React.FC<SalesBriefingDrawerProps> = ({
               </div>
               <div className="p-2 rounded bg-black/20 border border-white/5">
                 <div className="text-[10px] uppercase text-slate-400 font-sans">Pipeline Value</div>
-                <div className="text-lg font-bold text-emerald-400">${briefing.open_pipeline_value}</div>
+                <div className="text-lg font-bold text-emerald-400">₹{briefing.open_pipeline_value}</div>
               </div>
               <div className="p-2 rounded bg-black/20 border border-white/5">
                 <div className="text-[10px] uppercase text-slate-400 font-sans">Active Deals</div>
@@ -120,15 +120,15 @@ export const SalesBriefingDrawer: React.FC<SalesBriefingDrawerProps> = ({
               <div className="grid grid-cols-3 gap-2 text-center pt-1">
                 <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
                   <div className="text-[10px] text-slate-400 uppercase">Forecast</div>
-                  <div className="font-bold text-emerald-400 text-xs">${Number(forecast.forecast_revenue).toLocaleString()}</div>
+                  <div className="font-bold text-emerald-400 text-xs">₹{Number(forecast.forecast_revenue).toLocaleString()}</div>
                 </div>
                 <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
                   <div className="text-[10px] text-slate-400 uppercase">Committed</div>
-                  <div className="font-bold text-cyan-300 text-xs">${Number(forecast.committed_revenue).toLocaleString()}</div>
+                  <div className="font-bold text-cyan-300 text-xs">₹{Number(forecast.committed_revenue).toLocaleString()}</div>
                 </div>
                 <div className="p-2 rounded bg-slate-900/60 border border-slate-800">
                   <div className="text-[10px] text-slate-400 uppercase">At Risk</div>
-                  <div className="font-bold text-rose-400 text-xs">${Number(forecast.at_risk_revenue).toLocaleString()}</div>
+                  <div className="font-bold text-rose-400 text-xs">₹{Number(forecast.at_risk_revenue).toLocaleString()}</div>
                 </div>
               </div>
             </div>
@@ -173,7 +173,7 @@ export const SalesBriefingDrawer: React.FC<SalesBriefingDrawerProps> = ({
                     </div>
                     <p className="text-[11px] text-slate-300 leading-relaxed font-sans">{rec.reason}</p>
                     <div className="text-[10px] text-slate-400 mt-1">
-                      Target Unit Price: <span className="font-bold text-slate-200">${Number(rec.unit_price).toLocaleString()}</span>
+                      Target Unit Price: <span className="font-bold text-slate-200">₹{Number(rec.unit_price).toLocaleString()}</span>
                     </div>
                   </div>
                 ))}

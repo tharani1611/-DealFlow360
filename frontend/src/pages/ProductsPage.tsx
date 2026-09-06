@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { productApi } from '../services/productApi';
 import { Product } from '../types';
 import { DataTable, Column } from '../components/ui/DataTable';
@@ -10,10 +10,11 @@ import { GlassModal } from '../components/ui/GlassModal';
 import { LoadingState, ErrorState } from '../components/ui/EmptyState';
 import { ProductIntelligenceModal } from '../components/intelligence/ProductIntelligenceModal';
 import { useToast } from '../context/ToastContext';
-import { Plus, BarChart2 } from 'lucide-react';
+import { Plus, BarChart2, Package, Upload, X, Check } from 'lucide-react';
 
 export const ProductsPage: React.FC = () => {
   const { showToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,8 +27,10 @@ export const ProductsPage: React.FC = () => {
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
-  const [currency] = useState('USD');
+  const [currency] = useState('INR');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
 
   const loadProducts = async () => {
     setIsLoading(true);
@@ -46,6 +49,35 @@ export const ProductsPage: React.FC = () => {
     loadProducts();
   }, []);
 
+  const handleDeviceFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size limit (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image file size must be less than 5MB.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setImageUrl(reader.result);
+        setUploadedFileName(file.name);
+        showToast(`Image "${file.name}" loaded from device!`, 'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearImage = () => {
+    setImageUrl('');
+    setUploadedFileName(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !sku.trim() || !unitPrice) return;
@@ -56,8 +88,9 @@ export const ProductsPage: React.FC = () => {
         name: name.trim(),
         sku: sku.trim().toUpperCase(),
         unit_price: parseFloat(unitPrice),
-        currency: currency.trim() || 'USD',
+        currency: currency.trim() || 'INR',
         description: description.trim() || undefined,
+        image_url: imageUrl.trim() || undefined,
       });
       showToast(`Product "${name}" created!`, 'success');
       setIsModalOpen(false);
@@ -65,6 +98,8 @@ export const ProductsPage: React.FC = () => {
       setSku('');
       setUnitPrice('');
       setDescription('');
+      setImageUrl('');
+      setUploadedFileName(null);
       loadProducts();
     } catch (err: any) {
       showToast(err.message || 'Failed to create product in catalog.', 'error');
@@ -77,9 +112,25 @@ export const ProductsPage: React.FC = () => {
     {
       header: 'Product Name',
       render: (r) => (
-        <div>
-          <span className="font-extrabold text-slate-100 text-sm">{r.name}</span>
-          {r.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{r.description}</p>}
+        <div className="flex items-center gap-3">
+          {r.image_url ? (
+            <img
+              src={r.image_url}
+              alt={r.name}
+              className="w-10 h-10 rounded-lg object-cover border border-slate-700/80 shrink-0 bg-slate-900 shadow-sm"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 text-slate-500">
+              <Package className="w-5 h-5" />
+            </div>
+          )}
+          <div>
+            <span className="font-extrabold text-slate-100 text-sm">{r.name}</span>
+            {r.description && <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{r.description}</p>}
+          </div>
         </div>
       ),
     },
@@ -91,7 +142,7 @@ export const ProductsPage: React.FC = () => {
       header: 'Unit Price',
       render: (r) => (
         <span className="font-mono font-black text-slate-100 text-sm">
-          ${Number(r.unit_price).toLocaleString()} {r.currency}
+          ₹{Number(r.unit_price).toLocaleString()} {r.currency}
         </span>
       ),
     },
@@ -147,7 +198,7 @@ export const ProductsPage: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Add Product to Catalog"
-        subtitle="Define commercial product SKU and unit pricing"
+        subtitle="Define commercial product SKU, unit pricing, and product picture"
       >
         <form onSubmit={handleCreateProduct} className="space-y-4">
           <GlassInput
@@ -167,7 +218,7 @@ export const ProductsPage: React.FC = () => {
               required
             />
             <GlassInput
-              label="Unit Price ($)"
+              label="Unit Price (₹)"
               type="number"
               step="0.01"
               placeholder="999.00"
@@ -175,6 +226,85 @@ export const ProductsPage: React.FC = () => {
               onChange={(e) => setUnitPrice(e.target.value)}
               required
             />
+          </div>
+
+          {/* Device Upload & Image Selection Section */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-mono font-semibold text-slate-300">
+                Product Image (Optional)
+              </label>
+              <span className="text-[11px] font-mono text-slate-400">Device Upload or Web Link</span>
+            </div>
+
+            {/* Upload Button + File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleDeviceFileUpload}
+              className="hidden"
+            />
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-3 py-2 bg-indigo-950/80 border border-indigo-500/50 hover:bg-indigo-900 text-indigo-200 rounded-lg text-xs font-mono font-semibold flex items-center gap-2 transition-all shadow-sm"
+              >
+                <Upload className="w-4 h-4 text-indigo-400" />
+                Upload Image from Device
+              </button>
+
+              <span className="text-slate-500 font-mono text-xs">or</span>
+
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder="Paste image URL (https://...)"
+                  value={uploadedFileName ? `Device File: ${uploadedFileName}` : imageUrl}
+                  onChange={(e) => {
+                    setUploadedFileName(null);
+                    setImageUrl(e.target.value);
+                  }}
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            {/* Live Image Preview Thumbnail */}
+            {imageUrl.trim() && (
+              <div className="p-3 bg-slate-950/90 border border-emerald-500/30 rounded-xl flex items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={imageUrl.trim()}
+                    alt="Live Preview"
+                    className="w-12 h-12 rounded-lg object-cover border border-emerald-500/50 shrink-0 bg-slate-900"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="text-xs font-mono">
+                    <div className="font-bold text-emerald-400 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      {uploadedFileName ? 'Uploaded Device Picture' : 'Image Ready'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 truncate max-w-xs mt-0.5">
+                      {uploadedFileName || imageUrl}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleClearImage}
+                  className="p-1.5 bg-slate-900 hover:bg-rose-950 text-slate-400 hover:text-rose-300 rounded-lg transition-colors"
+                  title="Remove Picture"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <GlassTextarea

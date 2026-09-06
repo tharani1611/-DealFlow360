@@ -417,3 +417,29 @@ async def invalidate_quotation_approval(
             approval_level=approval.approval_level
         )
         logger.info(f"Quotation {quotation_id} approval invalidated due to commercial edit.")
+
+
+async def list_all_quotation_approvals(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    status_filter: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100
+) -> List[QuotationApproval]:
+    """Lists quotation approvals for the organization with optional status filtering."""
+    stmt = (
+        select(QuotationApproval)
+        .options(
+            selectinload(QuotationApproval.quotation),
+            selectinload(QuotationApproval.requested_by_user),
+            selectinload(QuotationApproval.approved_by_user),
+            selectinload(QuotationApproval.approval_rule),
+        )
+        .where(QuotationApproval.organization_id == organization_id)
+    )
+    if status_filter:
+        stmt = stmt.where(QuotationApproval.status == status_filter.upper())
+    stmt = stmt.order_by(QuotationApproval.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+

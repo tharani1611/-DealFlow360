@@ -43,7 +43,7 @@ export const QuotationsPage: React.FC = () => {
   const [contactId, setContactId] = useState('');
   const [dealId, setDealId] = useState('');
   const [title, setTitle] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('INR');
   const [validUntil, setValidUntil] = useState('');
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState('');
@@ -230,7 +230,7 @@ export const QuotationsPage: React.FC = () => {
       header: 'Total Amount',
       render: (r) => (
         <span className="font-mono font-black text-slate-100 text-sm">
-          {r.currency || 'USD'} ${Number(r.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {r.currency || 'INR'} ₹{Number(r.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </span>
       ),
     },
@@ -368,7 +368,7 @@ export const QuotationsPage: React.FC = () => {
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 options={[
-                  { value: 'USD', label: 'USD ($)' },
+                  { value: 'INR', label: 'INR (₹)' },
                   { value: 'EUR', label: 'EUR (€)' },
                   { value: 'INR', label: 'INR (₹)' },
                   { value: 'GBP', label: 'GBP (£)' },
@@ -419,7 +419,7 @@ export const QuotationsPage: React.FC = () => {
                       onChange={(e) => handleProductChange(idx, e.target.value)}
                       options={products.map((p) => ({
                         value: p.id,
-                        label: `${p.name} (Catalog: $${p.unit_price})`,
+                        label: `${p.name} (Catalog: ₹${p.unit_price})`,
                       }))}
                       required
                     />
@@ -438,7 +438,7 @@ export const QuotationsPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <GlassInput
-                    label="Unit Price Override ($)"
+                    label="Unit Price Override (₹)"
                     type="number"
                     step="0.01"
                     min="0"
@@ -456,7 +456,7 @@ export const QuotationsPage: React.FC = () => {
                 </div>
 
                 <div className="text-right text-xs font-mono text-slate-400">
-                  Line Total: <span className="text-slate-100 font-bold">${((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}</span>
+                  Line Total: <span className="text-slate-100 font-bold">₹{((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}</span>
                 </div>
               </div>
             ))}
@@ -464,7 +464,7 @@ export const QuotationsPage: React.FC = () => {
             <div className="flex justify-between items-center pt-2 text-sm font-mono text-slate-300 border-t border-slate-800">
               <span>Estimated Subtotal:</span>
               <span className="text-lg font-black text-cyan-400">
-                {currency} ${calculateSubtotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {currency} ₹{calculateSubtotal().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>

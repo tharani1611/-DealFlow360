@@ -63,8 +63,8 @@ export const ForecastDealTable: React.FC<ForecastDealTableProps> = ({ deals }) =
       header: 'Deal Value',
       render: (r) => (
         <div className="font-mono">
-          <span className="font-extrabold text-slate-100 block">${Number(r.value).toLocaleString()}</span>
-          <span className="text-[10px] text-emerald-400">Fcst: ${Number(r.forecast_value).toLocaleString()}</span>
+          <span className="font-extrabold text-slate-100 block">₹{Number(r.value).toLocaleString()}</span>
+          <span className="text-[10px] text-emerald-400">Fcst: ₹{Number(r.forecast_value).toLocaleString()}</span>
         </div>
       ),
     },

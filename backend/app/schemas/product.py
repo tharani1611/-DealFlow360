@@ -15,7 +15,10 @@ class ProductCreate(BaseModel):
     description: Optional[str] = Field(None, description="Detailed product description")
     unit_price: Decimal = Field(..., ge=Decimal("0.00"), description="Unit price (non-negative monetary decimal)")
     unit_cost: Decimal = Field(Decimal("0.00"), ge=Decimal("0.00"), description="Unit cost basis (non-negative monetary decimal)")
-    currency: str = Field("USD", min_length=3, max_length=3, description="3-letter ISO currency code (e.g. USD, EUR, INR)")
+    currency: str = Field("INR", min_length=3, max_length=3, description="3-letter ISO currency code (e.g. INR, USD, EUR)")
+    hsn_sac_code: Optional[str] = Field("8471", max_length=10, description="HSN/SAC Code for GST regulatory compliance")
+    gst_rate: Decimal = Field(Decimal("18.00"), ge=Decimal("0.00"), le=Decimal("28.00"), description="Applicable GST tax rate percentage (0, 5, 12, 18, 28)")
+    image_url: Optional[str] = Field(None, max_length=500, description="Optional product image URL")
     is_active: bool = Field(True, description="Product availability status flag")
 
     @field_validator("name")
@@ -51,6 +54,9 @@ class ProductUpdate(BaseModel):
     unit_price: Optional[Decimal] = Field(None, ge=Decimal("0.00"))
     unit_cost: Optional[Decimal] = Field(None, ge=Decimal("0.00"))
     currency: Optional[str] = Field(None, min_length=3, max_length=3)
+    hsn_sac_code: Optional[str] = Field(None, max_length=10)
+    gst_rate: Optional[Decimal] = Field(None, ge=Decimal("0.00"), le=Decimal("28.00"))
+    image_url: Optional[str] = Field(None, max_length=500)
     is_active: Optional[bool] = None
 
     @field_validator("name")
@@ -94,6 +100,9 @@ class ProductResponse(BaseModel):
     unit_price: Decimal
     unit_cost: Decimal = Decimal("0.00")
     currency: str
+    hsn_sac_code: Optional[str] = "8471"
+    gst_rate: Decimal = Decimal("18.00")
+    image_url: Optional[str] = None
     is_active: bool
     created_at: datetime
     updated_at: datetime

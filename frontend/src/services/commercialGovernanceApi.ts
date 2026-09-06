@@ -65,4 +65,10 @@ export const commercialGovernanceApi = {
       body: JSON.stringify(payload),
     });
   },
+
+  // List Approval Inbox
+  async getApprovalInbox(statusFilter?: string): Promise<QuotationApproval[]> {
+    const query = statusFilter ? `?status=${statusFilter}` : '';
+    return fetchApi<QuotationApproval[]>(`/approvals/inbox${query}`);
+  },
 };

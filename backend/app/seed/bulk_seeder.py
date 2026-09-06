@@ -312,7 +312,11 @@ async def seed_bulk_data(
         # 2. USERS (Staff & Admin Personas)
         # =========================================================================
         user_roles_def = [
-            ("Lab Admin", "lab.admin@dealflow.test", True),
+            ("Lab Admin", f"admin_{BULK_ORG_SLUG}@dealflow360.com", True),
+            ("Sales Lead", f"sales_{BULK_ORG_SLUG}@dealflow360.com", False),
+            ("Inventory Manager", f"inventory_{BULK_ORG_SLUG}@dealflow360.com", False),
+            ("Billing Controller", f"billing_{BULK_ORG_SLUG}@dealflow360.com", False),
+            ("Lab Admin Staff", "lab.admin@dealflow.test", True),
             ("Operations Director", "ops.director@dealflow.test", True),
             ("Commercial VP", "commercial.vp@dealflow.test", True),
             ("Finance Controller", "finance.controller@dealflow.test", True),
@@ -326,7 +330,6 @@ async def seed_bulk_data(
             ("Senior Account Exec 4", "ae4@dealflow.test", False),
             ("Inside Sales Rep 1", "isr1@dealflow.test", False),
             ("Inside Sales Rep 2", "isr2@dealflow.test", False),
-            ("Inventory Manager", "inventory.mgr@dealflow.test", False),
             ("Warehouse Dispatch Lead", "dispatch.lead@dealflow.test", False),
             ("Fulfillment Specialist", "fulfillment.spec@dealflow.test", False),
             ("Billing Specialist", "billing.spec@dealflow.test", False),

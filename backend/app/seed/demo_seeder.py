@@ -243,11 +243,15 @@ async def seed_demo_data(session: Optional[AsyncSession] = None) -> Dict[str, An
         # 2. USERS (Roles & Personas)
         # =========================================================================
         users_def = [
-            ("Admin User", "admin@dealflow.demo", True, org_demo.id, "admin"),
-            ("Sarah Jenkins", "sales@dealflow.demo", False, org_demo.id, "sales"),
+            ("Admin User", "admin_demo-enterprise@dealflow360.com", True, org_demo.id, "admin"),
+            ("Sarah Jenkins", "sales_demo-enterprise@dealflow360.com", False, org_demo.id, "sales"),
+            ("Ian Wright", "inventory_demo-enterprise@dealflow360.com", False, org_demo.id, "inventory"),
+            ("Billing Controller", "billing_demo-enterprise@dealflow360.com", False, org_demo.id, "billing"),
+            ("Admin User (Legacy)", "admin@dealflow.demo", True, org_demo.id, "admin_legacy"),
+            ("Sarah Jenkins (Legacy)", "sales@dealflow.demo", False, org_demo.id, "sales_legacy"),
             ("Paul Miller", "purchase@dealflow.demo", False, org_demo.id, "purchase"),
             ("Mark Davis", "manufacturing@dealflow.demo", False, org_demo.id, "manufacturing"),
-            ("Ian Wright", "inventory@dealflow.demo", False, org_demo.id, "inventory"),
+            ("Ian Wright (Legacy)", "inventory@dealflow.demo", False, org_demo.id, "inventory_legacy"),
             ("Robert Vance", "owner@dealflow.demo", True, org_demo.id, "business_owner"),
             ("Acme Sales Rep", "rep@acme.demo", False, org_acme.id, "sales_acme"),
         ]
@@ -836,10 +840,49 @@ async def seed_demo_data(session: Optional[AsyncSession] = None) -> Dict[str, An
         # =========================================================================
         # SHOWCASE SCENARIO 8: Subscription Billing & Proration
         # =========================================================================
+        # Sub 1: Active Monthly SaaS Plan (Apex Hospitality)
+        sub_req_apex = SubscriptionCreateRequest(
+            customer_id=customers["apex"].id,
+            product_id=products["saas"].id,
+            plan_name="DealFlow360 Enterprise SaaS Subscription",
+            billing_interval="MONTHLY",
+            quantity=Decimal("5.00"),
+            unit_price=Decimal("12500.00"),
+            start_date=now.date() - timedelta(days=90)
+        )
+        sub_apex = await subscriptions.create_subscription(db, org_demo.id, sub_req_apex)
+        sub_apex.next_billing_date = now.date() - timedelta(days=2)  # Due for billing schedule generation
+        
+        # Sub 2: Active Quarterly Infrastructure Hosting (Horizon Tech)
+        sub_req_horizon = SubscriptionCreateRequest(
+            customer_id=customers["horizon"].id,
+            product_id=products["pod"].id,
+            plan_name="High-Performance Acoustic Pod Managed Service",
+            billing_interval="QUARTERLY",
+            quantity=Decimal("2.00"),
+            unit_price=Decimal("45000.00"),
+            start_date=now.date() - timedelta(days=120)
+        )
+        sub_horizon = await subscriptions.create_subscription(db, org_demo.id, sub_req_horizon)
+        sub_horizon.next_billing_date = now.date() - timedelta(days=1)
+
+        # Sub 3: Active Monthly Support SLA (Starlight Healthcare)
+        sub_req_starlight = SubscriptionCreateRequest(
+            customer_id=customers["starlight"].id,
+            product_id=products["saas"].id,
+            plan_name="24/7 Platinum SLA & Dedicated TAM Support",
+            billing_interval="MONTHLY",
+            quantity=Decimal("1.00"),
+            unit_price=Decimal("8500.00"),
+            start_date=now.date() - timedelta(days=30)
+        )
+        await subscriptions.create_subscription(db, org_demo.id, sub_req_starlight)
+
+        # Sub 4: Historic Cancelled Plan (Nova Living)
         sub_req = SubscriptionCreateRequest(
             customer_id=customers["nova"].id,
             product_id=products["saas"].id,
-            plan_name="DealFlow Enterprise SaaS Plan",
+            plan_name="DealFlow Legacy Starter Plan",
             billing_interval="MONTHLY",
             quantity=Decimal("1.00"),
             unit_price=Decimal("2000.00"),

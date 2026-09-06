@@ -12,7 +12,7 @@ interface HybridBillingSummaryCardProps {
 
 export const HybridBillingSummaryCard: React.FC<HybridBillingSummaryCardProps> = ({
   billing,
-  currency = 'USD',
+  currency = 'INR',
   isLoading = false,
 }) => {
   if (isLoading) {

@@ -55,25 +55,25 @@ export const RevenueForecastCard: React.FC<RevenueForecastCardProps> = ({ foreca
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 text-center font-mono">
         <div className="p-3 bg-black/40 rounded-xl border border-indigo-500/30">
           <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">Forecast Revenue</span>
-          <span className="text-xl font-black text-emerald-400">${Number(forecast.forecast_revenue).toLocaleString()}</span>
+          <span className="text-xl font-black text-emerald-400">₹{Number(forecast.forecast_revenue).toLocaleString()}</span>
           <span className="text-[10px] text-slate-500 block mt-0.5">Adjusted Probability Total</span>
         </div>
 
         <div className="p-3 bg-black/40 rounded-xl border border-emerald-500/30">
           <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">Committed Revenue</span>
-          <span className="text-xl font-bold text-cyan-300">${Number(forecast.committed_revenue).toLocaleString()}</span>
+          <span className="text-xl font-bold text-cyan-300">₹{Number(forecast.committed_revenue).toLocaleString()}</span>
           <span className="text-[10px] text-emerald-400 block mt-0.5">High Confidence Deals</span>
         </div>
 
         <div className="p-3 bg-black/40 rounded-xl border border-rose-500/30">
           <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">At Risk Revenue</span>
-          <span className="text-xl font-bold text-rose-400">${Number(forecast.at_risk_revenue).toLocaleString()}</span>
+          <span className="text-xl font-bold text-rose-400">₹{Number(forecast.at_risk_revenue).toLocaleString()}</span>
           <span className="text-[10px] text-rose-300 block mt-0.5">Requires Action</span>
         </div>
 
         <div className="p-3 bg-black/40 rounded-xl border border-slate-800">
           <span className="text-[10px] text-slate-400 uppercase font-sans font-bold block">Open Pipeline</span>
-          <span className="text-xl font-bold text-slate-200">${Number(forecast.open_pipeline).toLocaleString()}</span>
+          <span className="text-xl font-bold text-slate-200">₹{Number(forecast.open_pipeline).toLocaleString()}</span>
           <span className="text-[10px] text-slate-500 block mt-0.5">Unweighted Value</span>
         </div>
       </div>
@@ -102,8 +102,8 @@ export const RevenueForecastCard: React.FC<RevenueForecastCardProps> = ({ foreca
                 <span className="text-[10px] text-slate-500">{p.deal_count} active deal(s)</span>
               </div>
               <div className="text-right">
-                <span className="font-bold text-emerald-400 text-sm">${Number(p.forecast_revenue).toLocaleString()}</span>
-                <span className="text-[10px] text-slate-400 block">${Number(p.committed_revenue).toLocaleString()} committed</span>
+                <span className="font-bold text-emerald-400 text-sm">₹{Number(p.forecast_revenue).toLocaleString()}</span>
+                <span className="text-[10px] text-slate-400 block">₹{Number(p.committed_revenue).toLocaleString()} committed</span>
               </div>
             </div>
           ))}

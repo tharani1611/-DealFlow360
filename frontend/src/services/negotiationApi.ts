@@ -7,7 +7,9 @@ import {
   ChangeRequestReview,
   CounterDiscountApply,
   QuotationVersion,
-  Quotation
+  Quotation,
+  NegotiationSimulationRequest,
+  NegotiationSimulationResponse,
 } from '../types';
 
 export const negotiationApi = {
@@ -52,4 +54,15 @@ export const negotiationApi = {
   getVersions: async (quotationId: string): Promise<QuotationVersion[]> => {
     return fetchApi<QuotationVersion[]>(`/quotations/${quotationId}/versions`);
   },
+
+  simulateCounterOffer: async (
+    quotationId: string,
+    payload: NegotiationSimulationRequest
+  ): Promise<NegotiationSimulationResponse> => {
+    return fetchApi<NegotiationSimulationResponse>(`/quotations/${quotationId}/simulate-counter-offer`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
 };
+
